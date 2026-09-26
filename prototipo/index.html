@@ -1000,7 +1000,55 @@
     return { pos, fw, right, up, f };
   }
   const toCam = (c, p) => { const d = V.sub(p, c.pos); return [V.dot(d, c.right), V.dot(d, c.up), V.dot(d, c.fw)]; };
-  const scr = (c, q) => [CW / 2 + c.f * q[0] / q[2], CH / 2 - c.f * q[1] / q[2]];
+  const scr = (c, q) => [LW / 2 + c.f * q[0] / q[2], LH / 2 - c.f * q[1] / q[2]];
+
+  // Estilo 16 bits: se dibuja a baja resolución, píxel a píxel, y se amplía sin suavizar
+  const LW = 240, LH = 150;
+  const LBUF = document.createElement("canvas"); LBUF.width = LW; LBUF.height = LH;
+  function clipSeg(x0, y0, x1, y1) {
+    let t0 = 0, t1 = 1;
+    const dx = x1 - x0, dy = y1 - y0, P = [-dx, dx, -dy, dy], Qv = [x0 + 4, LW + 4 - x0, y0 + 4, LH + 4 - y0];
+    for (let i = 0; i < 4; i++) {
+      if (P[i] === 0) { if (Qv[i] < 0) return null; continue; }
+      const r = Qv[i] / P[i];
+      if (P[i] < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+      else { if (r < t0) return null; if (r < t1) t1 = r; }
+    }
+    return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
+  }
+  function pxLine(g, x0, y0, x1, y1, w, col) {
+    const cl = clipSeg(x0, y0, x1, y1);
+    if (!cl) return;
+    [x0, y0, x1, y1] = cl.map(Math.round);
+    g.fillStyle = col;
+    const o = Math.floor((w - 1) / 2), dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (let n = 0; n < 1000; n++) {
+      g.fillRect(x0 - o, y0 - o, w, w);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  }
+  function pxEllipse(g, cx, cy, rx, ry, col) {
+    g.fillStyle = col; cx = Math.round(cx); cy = Math.round(cy);
+    for (let dy = -ry; dy <= ry; dy++) { const h = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy / (ry + 0.5)) ** 2))); g.fillRect(cx - h, cy + dy, 2 * h + 1, 1); }
+  }
+  const pxDisc = (g, cx, cy, r, col) => pxEllipse(g, cx, cy, r, r, col);
+  const DIGITS = { 0: "111101101101111", 1: "010110010010111", 2: "111001111100111", 3: "111001111001111", 4: "101101111001001",
+    5: "111100111001111", 6: "111100111101111", 7: "111001001001001", 8: "111101111101111", 9: "111101111001111" };
+  function pxNumber(g, str, cx, y, col) {
+    const w = str.length * 4 - 1;
+    let x = Math.round(cx - w / 2); y = Math.round(y);
+    g.fillStyle = "#0b0f0c"; g.fillRect(x - 1, y - 1, w + 2, 7);
+    g.fillStyle = col;
+    for (const ch of str) {
+      const m = DIGITS[ch];
+      if (m) for (let i = 0; i < 15; i++) if (m[i] === "1") g.fillRect(x + (i % 3), y + ((i / 3) | 0), 1, 1);
+      x += 4;
+    }
+  }
   function proj(c, p) {
     const q = toCam(c, p);
     if (q[2] < NEAR) return null;
@@ -1028,7 +1076,7 @@
       if (qa[2] < NEAR) qa = m; else qb = m;
     }
     const [x1, y1] = scr(c, qa), [x2, y2] = scr(c, qb);
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    pxLine(ctx, x1, y1, x2, y2, Math.max(1, Math.round(ctx.lineWidth)), ctx.strokeStyle);
   }
 
   function cameraFor(kind, inc, t, zoom) {
@@ -1043,80 +1091,83 @@
     else if (kind === "porteria") { pos = [352, 100 + (fe.y - 100) * 0.4, 28]; tgt = [fe.x, fe.y, 4]; f = 520; }
     else { pos = [fe.x, -100, 85]; tgt = [fe.x, fe.y, 2]; f = 600; }
     if (zoom) { f *= 3.5; tgt = [fe.x, fe.y, inc.focusZ ?? 4]; }
-    return makeCam(pos, tgt, f);
+    return makeCam(pos, tgt, f * LW / CW);
   }
 
   let CROWD_IMG = null;
   function crowdImg() {
     if (CROWD_IMG) return CROWD_IMG;
-    const cv = document.createElement("canvas"); cv.width = CW; cv.height = CH;
+    const cv = document.createElement("canvas"); cv.width = LW; cv.height = LH;
     const g = cv.getContext("2d");
-    g.fillStyle = "#121a23"; g.fillRect(0, 0, CW, CH);
+    g.fillStyle = "#121a23"; g.fillRect(0, 0, LW, LH);
     let s = 5;
     const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
     const cols = ["#2c4a63", "#3a566e", "#7cc4f0", "#5a3a33", "#6b4a3a", "#39444f", "#7a8a96"];
-    for (let y = 0; y < CH; y += 3) for (let x = 0; x < CW; x += 3) { g.fillStyle = cols[(r() * cols.length) | 0]; g.fillRect(x + ((r() * 2) | 0), y + ((r() * 2) | 0), 1, 1); }
+    for (let y = 0; y < LH; y += 2) for (let x = (y / 2) % 2; x < LW; x += 2) { g.fillStyle = cols[(r() * cols.length) | 0]; g.fillRect(x, y, 1, 1); }
     return (CROWD_IMG = cv);
   }
 
   function draw3D(ctx, inc, t, kind, zoom, line, labels) {
+    const g = LBUF.getContext("2d");
     const c = cameraFor(kind, inc, t, zoom);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(crowdImg(), 0, 0);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(crowdImg(), 0, 0);
     // césped
-    poly3(ctx, c, [[-80, -60, 0], [400, -60, 0], [400, 260, 0], [-80, 260, 0]], "#24522f");
-    for (let i = 1; i < 24; i += 2) { const x = -80 + i * 20; poly3(ctx, c, [[x, -60, 0], [x + 20, -60, 0], [x + 20, 260, 0], [x, 260, 0]], "#2a5f38"); }
+    poly3(g, c, [[-80, -60, 0], [400, -60, 0], [400, 260, 0], [-80, 260, 0]], "#2f6b3f");
+    for (let i = 1; i < 24; i += 2) { const x = -80 + i * 20; poly3(g, c, [[x, -60, 0], [x + 20, -60, 0], [x + 20, 260, 0], [x, 260, 0]], "#3a7a48"); }
     // vallas publicitarias en el lado lejano
     const by = c.pos[1] > 100 ? -6 : 206;
-    for (let x = -80, i = 0; x < 400; x += 32, i++) poly3(ctx, c, [[x, by, 0], [x + 32, by, 0], [x + 32, by, 4], [x, by, 4]], i % 2 ? "#243b56" : "#8a6a24");
+    for (let x = -80, i = 0; x < 400; x += 32, i++) poly3(g, c, [[x, by, 0], [x + 32, by, 0], [x + 32, by, 4], [x, by, 4]], i % 2 ? "#1f4e8c" : "#d8a21c");
     // líneas
-    ctx.strokeStyle = "rgba(228,236,224,.9)"; ctx.lineWidth = 1; ctx.lineCap = "butt";
-    const L = pts => { for (let i = 0; i < pts.length - 1; i++) seg3(ctx, c, [pts[i][0], pts[i][1], 0.05], [pts[i + 1][0], pts[i + 1][1], 0.05]); };
+    g.strokeStyle = "#e8efe4"; g.lineWidth = 1;
+    const L = pts => { for (let i = 0; i < pts.length - 1; i++) seg3(g, c, [pts[i][0], pts[i][1], 0.05], [pts[i + 1][0], pts[i + 1][1], 0.05]); };
     L([[10, 6], [304, 6], [304, 194], [10, 194], [10, 6]]);
     L([[304, 46], [256, 46], [256, 154], [304, 154]]);
     L([[304, 74], [290, 74], [290, 126], [304, 126]]);
     const a0 = Math.acos(-16 / 24), arc = [], cc = [];
-    for (let i = 0; i <= 12; i++) { const g = a0 + (2 * Math.PI - 2 * a0) * i / 12; arc.push([272 + 24 * Math.cos(g), 100 + 24 * Math.sin(g)]); }
-    for (let i = 0; i <= 16; i++) { const g = -Math.PI / 2 + Math.PI * i / 16; cc.push([10 + 22 * Math.cos(g), 100 + 22 * Math.sin(g)]); }
+    for (let i = 0; i <= 12; i++) { const a = a0 + (2 * Math.PI - 2 * a0) * i / 12; arc.push([272 + 24 * Math.cos(a), 100 + 24 * Math.sin(a)]); }
+    for (let i = 0; i <= 16; i++) { const a = -Math.PI / 2 + Math.PI * i / 16; cc.push([10 + 22 * Math.cos(a), 100 + 22 * Math.sin(a)]); }
     L(arc); L(cc); L([[271.5, 100], [272.5, 100]]);
     if (line) {
       const lx = offsideX(inc, t);
-      ctx.strokeStyle = COL.amber; ctx.lineWidth = 2;
-      seg3(ctx, c, [lx, 6, 0.1], [lx, 194, 0.1]);
+      g.strokeStyle = COL.amber; g.lineWidth = 1;
+      seg3(g, c, [lx, 6, 0.1], [lx, 194, 0.1]);
     }
     // sombras
-    ctx.fillStyle = "rgba(0,0,0,.32)";
+    const SH = "#1f4a2a";
     for (const e of inc.ents) {
       const p = at(e.k, t), q = proj(c, [p.x, p.y, 0]);
-      if (q) { ctx.beginPath(); ctx.ellipse(q.x, q.y, Math.max(1.5, 1.6 * q.s), Math.max(0.8, 0.55 * q.s), 0, 0, 7); ctx.fill(); }
+      if (q) pxEllipse(g, q.x, q.y, Math.max(1, Math.round(1.6 * q.s)), Math.max(0, Math.round(0.45 * q.s)), SH);
     }
     const b = ballPos(inc, t), bq = proj(c, [b.x, b.y, 0]);
-    if (bq) { ctx.beginPath(); ctx.ellipse(bq.x, bq.y, Math.max(1, 0.6 * bq.s), Math.max(0.5, 0.25 * bq.s), 0, 0, 7); ctx.fill(); }
+    if (bq) pxEllipse(g, bq.x, bq.y, Math.max(1, Math.round(0.6 * bq.s)), 0, SH);
     // jugadores, balón y portería, del más lejano al más cercano
     const depth = p => V.dot(V.sub(p, c.pos), c.fw);
-    const objs = inc.ents.map(e => { const p = at(e.k, t); return { d: depth([p.x, p.y, 4]), fn: () => drawPlayer3(ctx, c, e, inc, t, labels) }; });
-    objs.push({ d: depth([b.x, b.y, b.z]), fn: () => drawBall3(ctx, c, b) });
-    objs.push({ d: depth([307, 100, 7]), fn: () => drawGoal3(ctx, c) });
+    const objs = inc.ents.map(e => { const p = at(e.k, t); return { d: depth([p.x, p.y, 4]), fn: () => drawPlayer3(g, c, e, inc, t, labels) }; });
+    objs.push({ d: depth([b.x, b.y, b.z]), fn: () => drawBall3(g, c, b) });
+    objs.push({ d: depth([307, 100, 7]), fn: () => drawGoal3(g, c) });
     objs.sort((p, q) => q.d - p.d).forEach(o => o.fn());
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(LBUF, 0, 0, CW, CH);
   }
 
   function drawGoal3(ctx, c) {
-    ctx.lineCap = "butt";
-    ctx.strokeStyle = "rgba(235,240,235,.28)"; ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(235,240,235,.3)"; ctx.lineWidth = 1;
     for (let y = 90; y <= 110; y += 2.5) { seg3(ctx, c, [304, y, 14], [311, y, 11]); seg3(ctx, c, [311, y, 0], [311, y, 11]); }
     for (let z = 0; z <= 11; z += 2.2) seg3(ctx, c, [311, 90, z], [311, 110, z]);
     for (const y of [90, 110]) for (let x = 304; x <= 311; x += 2.3) seg3(ctx, c, [x, y, 0], [x, y, 14 - (x - 304) * 3 / 7]);
     const q = proj(c, [304, 100, 7]);
-    ctx.strokeStyle = "#f4f4f0"; ctx.lineWidth = q ? Math.max(1.5, 0.3 * q.s) : 1.5;
+    ctx.strokeStyle = "#f4f4f0"; ctx.lineWidth = q ? Math.max(1, 0.3 * q.s) : 1;
     seg3(ctx, c, [304, 90, 0], [304, 90, 14]); seg3(ctx, c, [304, 110, 0], [304, 110, 14]); seg3(ctx, c, [304, 90, 14], [304, 110, 14]);
   }
 
-  function drawBall3(ctx, c, b) {
+  function drawBall3(g, c, b) {
     const q = proj(c, [b.x, b.y, b.z + 0.65]);
     if (!q) return;
-    const r = Math.max(1.4, 0.65 * q.s);
-    ctx.fillStyle = COL.ball; ctx.strokeStyle = COL.dark; ctx.lineWidth = Math.max(0.6, r * 0.2);
-    ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 7); ctx.fill(); ctx.stroke();
+    const r = Math.max(1, Math.round(0.65 * q.s));
+    pxDisc(g, q.x, q.y, r + 1, "#0b0f0c");
+    pxDisc(g, q.x, q.y, r, "#ffffff");
   }
 
   function vel(k, t) {
@@ -1170,7 +1221,10 @@
     return P;
   }
 
-  function drawPlayer3(ctx, c, e, inc, t, labels) {
+  // Kits: camiseta, pantalón y medias, como en los sprites de los 90
+  // [camiseta, pantalón, medias, mangas]: las mangas más oscuras para distinguir los brazos del torso
+  const KITS = { N: ["#7cc4f0", "#f4f6f7", "#7cc4f0", "#3f86b8"], S: ["#f07a5a", "#22252a", "#f07a5a", "#b8452b"] };
+  function drawPlayer3(g, c, e, inc, t, labels) {
     const p = at(e.k, t), F = facing(e, inc, t), u = F.u, v = { x: -u.y, y: u.x };
     const P = bodyLocal(e, inc, t, F.sp, p, u, v);
     const th = e.fall !== undefined && t > e.fall ? clamp((t - e.fall) / 0.12, 0, 1) * 1.42 : 0;
@@ -1181,39 +1235,36 @@
     };
     const Q = {};
     for (const k in P) if (Array.isArray(P[k])) Q[k] = proj(c, W3(P[k]));
+    for (const sd of ["L", "R"]) if (Q["hip" + sd] && Q["foot" + sd]) Q["knee" + sd] = { x: (Q["hip" + sd].x + Q["foot" + sd].x) / 2, y: (Q["hip" + sd].y + Q["foot" + sd].y) / 2 };
     const mid = proj(c, [p.x, p.y, 5]);
     if (!mid) return;
-    const s = mid.s, lw = m => Math.max(1, m * s);
-    const ln = (a, b, col, w) => {
-      if (!Q[a] || !Q[b]) return;
-      ctx.strokeStyle = col; ctx.lineWidth = lw(w);
-      ctx.beginPath(); ctx.moveTo(Q[a].x, Q[a].y); ctx.lineTo(Q[b].x, Q[b].y); ctx.stroke();
-    };
-    const col = teamColor(e), shorts = e.t === "N" ? "#eef2f4" : "#23262b", skin = "#d9b896";
-    ctx.lineCap = "round";
-    ln("hipL", "footL", skin, 0.6); ln("hipR", "footR", skin, 0.6);
-    ctx.fillStyle = "#111";
-    for (const f of ["footL", "footR"]) if (Q[f]) { const r = Math.max(1, 0.45 * s); ctx.fillRect(Q[f].x - r, Q[f].y - r, 2 * r, 2 * r); }
+    const s = mid.s, px = m => Math.max(1, Math.round(m * s));
+    const [shirt, shorts, socks, sleeve] = e.gk ? [teamColor(e), "#22252a", teamColor(e), e.t === "N" ? "#b89a2a" : "#7a57a8"] : KITS[e.t];
+    const OUT = "#0b0f0c", SKIN = "#e2b48a", HAIR = "#3a2618", BOOT = "#101010";
+    const parts = [
+      ["hipL", "kneeL", px(0.7), SKIN], ["kneeL", "footL", px(0.7), socks],
+      ["hipR", "kneeR", px(0.7), SKIN], ["kneeR", "footR", px(0.7), socks],
+      ["hip", "neck", Math.max(2, px(1.9)), shirt],
+      ["hipL", "hipR", px(1.3), shorts],
+      ["shL", "elbL", px(0.65), sleeve], ["elbL", "handL", px(0.55), SKIN],
+      ["shR", "elbR", px(0.65), sleeve], ["elbR", "handR", px(0.55), SKIN]
+    ];
+    const hr = Math.max(1, Math.round(0.85 * s));
+    // contorno
+    for (const [a, b, w] of parts) if (Q[a] && Q[b]) pxLine(g, Q[a].x, Q[a].y, Q[b].x, Q[b].y, w + 2, OUT);
+    if (Q.head) pxDisc(g, Q.head.x, Q.head.y, hr + 1, OUT);
+    // color
+    for (const [a, b, w, col] of parts) if (Q[a] && Q[b]) pxLine(g, Q[a].x, Q[a].y, Q[b].x, Q[b].y, w, col);
+    for (const f of ["footL", "footR"]) if (Q[f]) { const w = px(0.9); g.fillStyle = BOOT; g.fillRect(Math.round(Q[f].x) - (w >> 1), Math.round(Q[f].y) - 1, w + 1, Math.max(2, px(0.5))); }
     if (P.studs) {
       // tacos por delante, mirando al rival
-      ctx.fillStyle = "#e8e8e8";
-      const r = Math.max(0.8, 0.16 * s);
-      for (const k of [-0.3, 0, 0.3]) { const q = proj(c, W3([P.footR[0] + 0.5, P.footR[1] + k, P.footR[2]])); if (q) ctx.fillRect(q.x - r, q.y - r, 2 * r, 2 * r); }
+      const a = proj(c, W3([P.footR[0] + 0.5, P.footR[1] - 0.35, P.footR[2]])), b = proj(c, W3([P.footR[0] + 0.5, P.footR[1] + 0.35, P.footR[2]]));
+      if (a && b) pxLine(g, a.x, a.y, b.x, b.y, Math.max(1, px(0.2)), "#f4f4f4");
     }
-    ln("hipL", "hipR", shorts, 1.1);
-    ln("hip", "neck", col, 1.9);
-    ln("shL", "handL", skin, 0.5); ln("shR", "handR", skin, 0.5);
-    ln("shL", "elbL", col, 0.62); ln("shR", "elbR", col, 0.62);
     if (Q.head) {
-      const r = Math.max(1.3, 0.85 * s);
-      ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(Q.head.x, Q.head.y, r, 0, 7); ctx.fill();
-      ctx.fillStyle = "#2b211a"; ctx.beginPath(); ctx.arc(Q.head.x, Q.head.y - r * 0.25, r * 0.85, Math.PI, 0); ctx.fill();
-      if (labels) {
-        ctx.font = "16px VT323, monospace"; ctx.textAlign = "center";
-        ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.fillStyle = col;
-        const y = Q.head.y - r - 4;
-        ctx.strokeText(dorsal(e), Q.head.x, y); ctx.fillText(dorsal(e), Q.head.x, y);
-      }
+      pxDisc(g, Q.head.x, Q.head.y, hr, SKIN);
+      g.fillStyle = HAIR; g.fillRect(Math.round(Q.head.x) - hr, Math.round(Q.head.y) - hr, 2 * hr + 1, Math.max(1, hr));
+      if (labels) pxNumber(g, dorsal(e), Q.head.x, Q.head.y - hr - 9, teamColor(e));
     }
   }
 

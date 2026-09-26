@@ -79,7 +79,8 @@ su precio.
 no se juzgan al momento: vuelven más tarde, en informes, titulares o personajes.
 
 ## 7. Estilo visual
-- **Prototipo**: jugadores 3D pixelados (cuerpo, brazos, piernas, tacos) sobre un campo en
+- **Prototipo**: sprites pixelados al estilo de los FIFA de los 90 (baja resolución, contorno
+  oscuro, kits con camiseta, pantalón y medias) sobre un campo en
   perspectiva, más una vista cenital tipo pizarra.
 - **Objetivo**: pixel art de baja resolución y paleta limitada, ambiente de cabina VAR
   (monitores, líneas de escaneo, tonos apagados con acentos ámbar).
