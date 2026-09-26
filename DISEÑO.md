@@ -33,8 +33,13 @@ mirar mejor, pero cuesta tiempo, paciencia de la grada y no siempre está de tu 
 | **Dinero** | Tu sueldo de árbitro, en forintos | Base + bonus por acierto − multas (+ sobornos) |
 
 ## 5. El VAR
-- **Herramientas**: línea temporal frame a frame, cámara lenta, zoom, cámara lateral y
-  línea de fuera de juego.
+- **En directo ves con tus ojos**: cámara a pie de campo, detrás de la jugada y en diagonal,
+  como corre un árbitro. Hay jugadores que tapan y ángulos malos.
+- **Cámaras del VAR**: tribuna, detrás de la portería, contracampo y cenital (pizarra).
+  Cada jugada tiene un ángulo "bueno" (la entrada se ve de lado desde la portería; la mano,
+  de frente) y otros que engañan. Encontrarlo es parte del juego.
+- **Herramientas**: línea temporal frame a frame, cámara lenta, zoom, dorsales y línea de
+  fuera de juego pintada sobre el césped.
 - **Baja resolución a propósito**: en directo la imagen es pequeña y pixelada; con zoom se
   ven detalles (un brazo pegado al cuerpo, un hombro adelantado) que en directo no.
 - **La sala VAR es un personaje**: te recomienda revisar (o no). A veces acierta, a veces
@@ -74,7 +79,8 @@ su precio.
 no se juzgan al momento: vuelven más tarde, en informes, titulares o personajes.
 
 ## 7. Estilo visual
-- **Prototipo**: pizarra táctica pixelada (círculos de colores sobre el campo).
+- **Prototipo**: jugadores 3D pixelados (cuerpo, brazos, piernas, tacos) sobre un campo en
+  perspectiva, más una vista cenital tipo pizarra.
 - **Objetivo**: pixel art de baja resolución y paleta limitada, ambiente de cabina VAR
   (monitores, líneas de escaneo, tonos apagados con acentos ámbar).
 

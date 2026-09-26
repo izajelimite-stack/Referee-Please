@@ -190,7 +190,7 @@
 <script>
 (() => {
   "use strict";
-  const W = 320, H = 200, LIVE_MS = 3600;
+  const W = 320, H = 200, CW = 480, CH = 300, LIVE_MS = 3600;
   const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const COL = {
     pitch: "#2f6b3f", pitch2: "#2a613a", chalk: "#dfe8d8", norte: "#7cc4f0", sur: "#f07a5a",
@@ -212,8 +212,6 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  // Poses para la cámara lateral
-  const run = (t, speed = 38) => { const a = 28 * Math.sin(t * speed); return { legF: a, legB: -a, lean: 8 }; };
 
   // ---------- Prólogo: final de Copa, mayo de 2019 ----------
   const INCIDENTS = [
@@ -241,7 +239,8 @@
         { id: "D3", t: "S", k: [[0, 226, 162], [1, 246, 150]] },
         { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [0.8, 294, 99], [1, 297, 93]] }
       ],
-      ball: [[0, 152, 121], [0.3, 170, 113], [0.6, 270, 95], [0.8, 285, 97], [1, 306, 93]]
+      ball: [[0, 152, 121], [0.3, 170, 113], [0.6, 270, 95], [0.8, 285, 97], [1, 306, 93]],
+      ballZ: [[0, 0], [0.8, 0], [1, 2.5]]
     },
     {
       minute: 27, title: "Regate en el área",
@@ -258,24 +257,16 @@
       truth: "Amarilla al 11 por simulación",
       why: "El defensor tocó el balón primero y no llegó a tocar al 11, que se tiró sin contacto. Amarilla por simulación. Dejar seguir el juego era aceptable, pero incompleto.",
       ents: [
-        { id: "A11", t: "N", fall: 0.62, k: [[0, 236, 150], [0.45, 262, 126], [0.5, 266, 122], [0.62, 274, 117], [1, 277, 116]] },
+        { id: "A11", t: "N", fall: 0.62, dive: true, k: [[0, 236, 150], [0.45, 262, 126], [0.5, 266, 122], [0.62, 274, 117], [1, 277, 116]] },
         { id: "A9", t: "N", k: [[0, 250, 96], [1, 276, 92]] },
-        { id: "D3", t: "S", k: [[0, 258, 110], [0.45, 262, 128], [0.5, 265, 131], [0.6, 268, 134], [1, 269, 136]] },
+        { id: "D3", t: "S", slide: 0.42, k: [[0, 258, 110], [0.45, 262, 128], [0.5, 265, 131], [0.6, 268, 134], [1, 269, 136]] },
         { id: "D4", t: "S", k: [[0, 262, 90], [1, 282, 96]] },
         { id: "D5", t: "S", k: [[0, 230, 132], [1, 252, 136]] },
         { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [1, 296, 108]] }
       ],
-      ball: [[0, 240, 149], [0.3, 256, 137], [0.48, 265, 130], [0.5, 266, 131], [0.75, 284, 165], [1, 296, 184]],
-      side: {
-        focus: 170,
-        figs: [
-          { c: COL.norte, dir: 1, k: [[0, 40], [0.5, 152], [0.58, 160], [0.72, 168], [1, 170]],
-            pose: t => t < 0.58 ? run(t) : { legF: 20, legB: -30, lean: 10, armsUp: true, fall: clamp((t - 0.58) / 0.14, 0, 1) } },
-          { c: COL.sur, dir: -1, k: [[0, 250], [0.3, 212], [0.5, 190], [0.65, 186], [1, 186]],
-            pose: t => t < 0.3 ? run(t) : { slide: true, legF: 90 - clamp((t - 0.5) * 300, 0, 50), legB: -40, lean: -55 } }
-        ],
-        ball: [[0, 48, 0], [0.45, 166, 0], [0.5, 172, 0], [0.7, 200, 16], [0.9, 240, 4], [1, 256, 0]]
-      }
+      ball: [[0, 240, 149], [0.3, 256, 137], [0.48, 265.5, 132.5], [0.5, 265.8, 134], [0.75, 284, 165], [1, 296, 184]],
+      ballZ: [[0, 0], [0.5, 0], [0.6, 2.5], [0.75, 0]],
+      focusZ: 2
     },
     {
       minute: 41, title: "Centro al área",
@@ -294,12 +285,14 @@
         { id: "A7", t: "N", k: [[0, 250, 22], [0.2, 262, 26], [1, 268, 30]] },
         { id: "A9", t: "N", k: [[0, 270, 70], [0.55, 278, 92], [1, 280, 98]] },
         { id: "A10", t: "N", k: [[0, 236, 104], [1, 258, 110]] },
-        { id: "D2", t: "S", arm: true, k: [[0, 286, 88], [0.55, 283, 99], [1, 285, 102]] },
+        { id: "D2", t: "S", arms: "tucked", face: [263, 27], k: [[0, 284, 94], [0.55, 283, 98], [1, 284, 100]] },
         { id: "D4", t: "S", k: [[0, 284, 116], [1, 282, 118]] },
         { id: "D5", t: "S", k: [[0, 262, 120], [1, 266, 116]] },
         { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [0.4, 297, 92], [1, 297, 96]] }
       ],
-      ball: [[0, 248, 24], [0.2, 263, 27], [0.55, 280.5, 97.5], [1, 252, 122]]
+      ball: [[0, 248, 24], [0.2, 263, 27], [0.55, 283.8, 96.9], [1, 262, 122]],
+      ballZ: [[0, 0], [0.2, 0.5], [0.38, 15], [0.55, 6.3], [0.75, 1.5], [0.85, 0]],
+      focusZ: 6
     },
     {
       minute: 63, title: "Entrada en el medio campo",
@@ -318,25 +311,12 @@
       ents: [
         { id: "A10", t: "N", fall: 0.56, k: [[0, 120, 110], [0.5, 160, 112], [0.56, 164, 113], [1, 167, 114]] },
         { id: "A8", t: "N", k: [[0, 110, 70], [1, 150, 76]] },
-        { id: "D6", t: "S", k: [[0, 150, 150], [0.5, 160, 118], [0.6, 164, 116], [1, 166, 117]] },
+        { id: "D6", t: "S", kick: { t0: 0.4, t1: 0.5, t2: 0.62, h: 2.6, target: "A10" }, k: [[0, 150, 150], [0.5, 160, 118], [0.6, 164, 116], [1, 166, 117]] },
         { id: "D8", t: "S", k: [[0, 190, 96], [1, 184, 104]] },
         { id: "D4", t: "S", k: [[0, 236, 104], [1, 228, 106]] }
       ],
       ball: [[0, 122, 110], [0.45, 158, 111], [1, 200, 104]],
-      side: {
-        focus: 166,
-        figs: [
-          { c: COL.norte, dir: 1, k: [[0, 60], [0.46, 154], [0.5, 158], [0.56, 166], [1, 176]],
-            pose: t => t < 0.46 ? run(t) : t < 0.52 ? { legF: 10, legB: -15, lean: 8 } : { legF: 25, legB: -35, lean: 10, fall: clamp((t - 0.52) / 0.15, 0, 1) } },
-          { c: COL.sur, dir: -1, k: [[0, 260], [0.38, 196], [0.5, 178], [0.62, 172], [1, 170]],
-            pose: t => {
-              if (t < 0.38) return run(t);
-              const up = t < 0.5 ? 20 + (t - 0.38) / 0.12 * 58 : t < 0.62 ? 78 : Math.max(10, 78 - (t - 0.62) * 520);
-              return { legF: up, legB: -12, lean: -20, studs: up > 45 };
-            } }
-        ],
-        ball: [[0, 66, 0], [0.45, 156, 0], [1, 236, 0]]
-      }
+      focusZ: 2.5
     },
     {
       minute: 88, title: "Disparo desde fuera",
@@ -358,9 +338,10 @@
         { id: "D5", t: "S", k: [[0, 246, 108], [1, 252, 112]] },
         { id: "D4", t: "S", k: [[0, 250, 82], [1, 256, 86]] },
         { id: "D2", t: "S", k: [[0, 232, 70], [1, 240, 76]] },
-        { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [0.6, 298, 96], [0.8, 297, 86], [1, 296, 84]] }
+        { id: "GK", t: "S", gk: true, fall: 0.66, dive: true, k: [[0, 298, 100], [0.6, 298, 96], [0.8, 297, 86], [1, 296, 84]] }
       ],
-      ball: [[0, 192, 100], [0.35, 217, 98], [0.8, 305, 88], [1, 309, 88]]
+      ball: [[0, 192, 100], [0.35, 217, 98], [0.8, 305, 88], [1, 309, 88]],
+      ballZ: [[0, 0], [0.35, 0], [0.6, 9], [0.8, 12.5], [1, 5]]
     }
   ];
   const HALF_AFTER = 2; // el descanso llega después de la jugada 3
@@ -390,7 +371,7 @@
   const fullName = r => `${r.apellido} ${r.nombre}`; // orden húngaro: apellido primero
 
   // Estado de la vista (no se guarda)
-  const view = { t: 0, cam: "cenital", zoom: false, line: false, anim: 0, bg: 0 };
+  const view = { t: 0, cam: "tribuna", zoom: false, line: false, anim: 0, bg: 0 };
 
   const $ = s => document.querySelector(s);
   const screen = $("#screen");
@@ -424,8 +405,8 @@
   // ---------- Menú principal ----------
   const HOW = `
     <ul class="how">
-      <li>Cada jugada la ves <b>una sola vez</b>, en directo. Mira bien.</li>
-      <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, zoom, cámara lateral y línea de fuera de juego. Tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
+      <li>Cada jugada la ves <b>una sola vez</b>, en directo y con tus propios ojos: a pie de campo, con jugadores que te tapan. Mira bien.</li>
+      <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, cuatro cámaras, zoom y línea de fuera de juego. Tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
       <li>La sala VAR, tu asistente y la grada opinan. <b>No siempre tienen razón.</b></li>
       <li>Lee el <b>reglamento</b>: las circulares cambian las reglas.</li>
       <li>No sabrás si acertaste hasta el <b>informe del comité</b>, al final del partido.</li>
@@ -624,7 +605,7 @@
     const inc = INCIDENTS[state.idx];
     state.cur = { watched: false, varOpen: false, decided: null };
     state.log = inc.pre.map(m => [...m]);
-    Object.assign(view, { t: 0, cam: "cenital", zoom: false, line: false });
+    Object.assign(view, { t: 0, cam: "tribuna", zoom: false, line: false });
     render();
   }
 
@@ -646,7 +627,7 @@
       <section class="stage">
         <div class="left">
           <div class="monitor ${c.varOpen ? "var" : ""}" id="monitor">
-            <canvas id="cv" width="${W}" height="${H}" aria-label="Vista de la jugada"></canvas>
+            <canvas id="cv" width="${CW}" height="${CH}" aria-label="Vista de la jugada"></canvas>
             <div class="tag" id="tag">${c.varOpen ? "VAR · REVISIÓN" : "● EN DIRECTO"}</div>
             <div class="tc" id="tc"></div>
             ${c.watched ? "" : `<button class="playover" id="playBtn">▶ Ver jugada</button>`}
@@ -663,8 +644,10 @@
               <button class="btn sm" id="zoom" aria-pressed="false">Zoom</button>
               <button class="btn sm" id="line" aria-pressed="false">Línea de fuera de juego</button>
               <span class="seg">
+                <button class="btn sm" data-cam="tribuna">Tribuna</button>
+                <button class="btn sm" data-cam="porteria">Portería</button>
+                <button class="btn sm" data-cam="contra">Contracampo</button>
                 <button class="btn sm" data-cam="cenital">Cenital</button>
-                <button class="btn sm" data-cam="lateral" ${inc.side ? "" : "disabled title='No hay cámara lateral para esta jugada'"}>Lateral</button>
               </span>
             </div>
           </div>
@@ -923,26 +906,40 @@
   }
 
   // ---------- Dibujo ----------
+  // Mundo: x a lo largo del campo (portería en x=304), y a lo ancho, z altura. 1 unidad ≈ 18 cm.
+  const CAMS = { ojos: "TU VISTA", tribuna: "CAM 1 · TRIBUNA", porteria: "CAM 2 · PORTERÍA", contra: "CAM 3 · CONTRACAMPO", cenital: "CAM 4 · CENITAL" };
+
+  const focusPos = (inc, t) => at(inc.ents.find(e => e.id === inc.focus).k, t);
+  const ballPos = (inc, t) => { const b = at(inc.ball, t); return { x: b.x, y: b.y, z: inc.ballZ ? at(inc.ballZ, t).x : 0 }; };
+  const dorsal = e => e.gk ? "1" : e.id.replace(/\D/g, "");
+  const teamColor = e => e.t === "N" ? (e.gk ? COL.gkN : COL.norte) : (e.gk ? COL.gkS : COL.sur);
+
   function draw() {
     const cv = $("#cv");
     if (!cv) return;
     const ctx = cv.getContext("2d");
-    const inc = INCIDENTS[state.idx];
-    const c = state.cur;
-    const varOn = c.varOpen;
-    const cam = varOn && view.cam === "lateral" && inc.side ? "lateral" : "cenital";
-    if (cam === "lateral") drawSide(ctx, inc, view.t, varOn && view.zoom);
-    else drawTop(ctx, inc, view.t, varOn && view.zoom, varOn && view.line);
+    const inc = INCIDENTS[state.idx], varOn = state.cur.varOpen;
+    const cam = varOn ? view.cam : "ojos";
+    const zoom = varOn && view.zoom, line = varOn && view.line;
+    if (cam === "cenital") drawTop(ctx, inc, view.t, zoom, line);
+    else draw3D(ctx, inc, view.t, cam, zoom, line, varOn);
     const tc = $("#tc");
-    if (tc) tc.textContent = varOn ? `${cam === "lateral" ? "CAM LAT" : "CAM CEN"}${view.zoom ? " ×3" : ""} · ${(view.t * LIVE_MS / 1000).toFixed(2)}s` : `${inc.minute}'`;
+    if (tc) tc.textContent = varOn ? `${CAMS[cam]}${zoom ? " · ZOOM" : ""} · ${(view.t * LIVE_MS / 1000).toFixed(2)}s` : `TU VISTA · ${inc.minute}'`;
     const scrub = $("#scrub");
     if (scrub) scrub.value = Math.round(view.t * 1000);
     const zb = $("#zoom"), lb = $("#line");
     if (zb) zb.setAttribute("aria-pressed", String(view.zoom));
-    if (lb) { lb.setAttribute("aria-pressed", String(view.line)); lb.disabled = cam === "lateral"; }
+    if (lb) lb.setAttribute("aria-pressed", String(view.line));
     document.querySelectorAll("[data-cam]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cam === cam)));
   }
 
+  // Segundo defensor más adelantado (el portero cuenta), medido por la parte del cuerpo más adelantada
+  function offsideX(inc, t) {
+    const xs = inc.ents.filter(e => e.t === "S").map(e => at(e.k, t).x + 1).sort((a, b) => b - a);
+    return xs[1] ?? xs[0];
+  }
+
+  // ----- Cenital (pizarra) -----
   function drawPitch(ctx) {
     for (let i = 0; i < 17; i++) { ctx.fillStyle = i % 2 ? COL.pitch2 : COL.pitch; ctx.fillRect(i * 20, 0, 20, H); }
     ctx.strokeStyle = COL.chalk; ctx.lineWidth = 1;
@@ -953,112 +950,271 @@
     const a = Math.acos(-16 / 24);
     ctx.beginPath(); ctx.arc(272.5, 100.5, 24, a, 2 * Math.PI - a); ctx.stroke();
     ctx.beginPath(); ctx.arc(10.5, 100.5, 22, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-    // portería
     ctx.fillStyle = "rgba(230,240,230,.25)"; ctx.fillRect(305, 90, 6, 20);
     ctx.fillStyle = COL.chalk; ctx.fillRect(304, 89, 7, 1); ctx.fillRect(304, 110, 7, 1);
   }
 
   function drawTop(ctx, inc, t, zoom, line) {
+    const k = CW / W;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#08100b"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#08100b"; ctx.fillRect(0, 0, CW, CH);
     if (zoom) {
-      const f = at(inc.ents.find(e => e.id === inc.focus).k, t), s = 3;
-      ctx.setTransform(s, 0, 0, s, Math.round(W / 2 - f.x * s), Math.round(H / 2 - f.y * s));
-    }
+      const f = focusPos(inc, t), s = k * 3;
+      ctx.setTransform(s, 0, 0, s, Math.round(CW / 2 - f.x * s), Math.round(CH / 2 - f.y * s));
+    } else ctx.setTransform(k, 0, 0, k, 0, 0);
     drawPitch(ctx);
-    const pos = inc.ents.map(e => ({ e, p: at(e.k, t) }));
     if (line) {
-      const xs = pos.filter(o => o.e.t === "S").map(o => o.p.x + 3).sort((a, b) => b - a);
-      const lx = xs[1] ?? xs[0];
       ctx.fillStyle = COL.amber;
-      ctx.fillRect(lx - (zoom ? 0.17 : 0.5), 0, zoom ? 0.34 : 1, H);
+      ctx.fillRect(offsideX(inc, t) - (zoom ? 0.15 : 0.35), 0, zoom ? 0.3 : 0.7, H);
     }
-    for (const { e, p } of pos) {
-      const col = e.t === "N" ? (e.gk ? COL.gkN : COL.norte) : (e.gk ? COL.gkS : COL.sur);
+    for (const e of inc.ents) {
+      const p = at(e.k, t);
       ctx.fillStyle = "rgba(0,0,0,.3)";
       ctx.beginPath(); ctx.ellipse(p.x + 1, p.y + 1.2, 3, 2, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = col; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
+      ctx.fillStyle = teamColor(e); ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
       ctx.beginPath();
       if (e.fall !== undefined && t >= e.fall) ctx.ellipse(p.x + 1, p.y, 4.6, 2.2, 0.35, 0, 7);
       else ctx.arc(p.x, p.y, 3, 0, 7);
       ctx.fill(); ctx.stroke();
-      if (e.arm) {
-        // brazo pegado al costado, del lado del balón
-        ctx.strokeStyle = COL.arm; ctx.lineWidth = 1.1;
-        ctx.beginPath(); ctx.moveTo(p.x - 3.4, p.y - 2); ctx.lineTo(p.x - 3.4, p.y + 1.6); ctx.stroke();
+      if (zoom) {
+        ctx.fillStyle = COL.dark; ctx.font = "5px monospace"; ctx.textAlign = "center";
+        ctx.fillText(dorsal(e), p.x, p.y + 1.7);
       }
     }
-    const b = at(inc.ball, t);
-    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.arc(b.x + 0.8, b.y + 0.8, 1.5, 0, 7); ctx.fill();
+    const b = ballPos(inc, t);
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.arc(b.x + 0.8 + b.z * 0.3, b.y + 0.8 + b.z * 0.3, 1.5, 0, 7); ctx.fill();
     ctx.fillStyle = COL.ball; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.5;
-    ctx.beginPath(); ctx.arc(b.x, b.y, 1.6, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(b.x, b.y, 1.6 + b.z * 0.05, 0, 7); ctx.fill(); ctx.stroke();
   }
 
-  // Grada para la cámara lateral (fija)
-  const CROWD = (() => {
-    let s = 7;
-    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const cols = ["#7cc4f0", "#7cc4f0", "#f07a5a", "#cfd6da", "#3b4a5c", "#566a7e"];
-    const out = [];
-    for (let y = 14; y < 104; y += 6) for (let x = 0; x < W; x += 5) out.push([x + rnd() * 3, y + rnd() * 3, cols[(rnd() * cols.length) | 0]]);
-    return out;
-  })();
+  // ----- 3D: cámaras de televisión y tu vista -----
+  const V = {
+    sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+    dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+    cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+    norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+  };
+  const NEAR = 2;
+  function makeCam(pos, tgt, f) {
+    const fw = V.norm(V.sub(tgt, pos)), right = V.norm(V.cross([0, 0, 1], fw)), up = V.cross(fw, right);
+    return { pos, fw, right, up, f };
+  }
+  const toCam = (c, p) => { const d = V.sub(p, c.pos); return [V.dot(d, c.right), V.dot(d, c.up), V.dot(d, c.fw)]; };
+  const scr = (c, q) => [CW / 2 + c.f * q[0] / q[2], CH / 2 - c.f * q[1] / q[2]];
+  function proj(c, p) {
+    const q = toCam(c, p);
+    if (q[2] < NEAR) return null;
+    const [x, y] = scr(c, q);
+    return { x, y, s: c.f / q[2] };
+  }
+  function poly3(ctx, c, pts, fill) {
+    const qs = pts.map(p => toCam(c, p)), out = [];
+    for (let i = 0; i < qs.length; i++) {
+      const a = qs[i], b = qs[(i + 1) % qs.length], ai = a[2] >= NEAR, bi = b[2] >= NEAR;
+      if (ai) out.push(a);
+      if (ai !== bi) { const u = (NEAR - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, NEAR]); }
+    }
+    if (out.length < 3) return;
+    ctx.fillStyle = fill; ctx.beginPath();
+    out.forEach((q, i) => { const [x, y] = scr(c, q); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.closePath(); ctx.fill();
+  }
+  function seg3(ctx, c, a, b) {
+    let qa = toCam(c, a), qb = toCam(c, b);
+    if (qa[2] < NEAR && qb[2] < NEAR) return;
+    if (qa[2] < NEAR || qb[2] < NEAR) {
+      const u = (NEAR - qa[2]) / (qb[2] - qa[2]);
+      const m = [qa[0] + (qb[0] - qa[0]) * u, qa[1] + (qb[1] - qa[1]) * u, NEAR];
+      if (qa[2] < NEAR) qa = m; else qb = m;
+    }
+    const [x1, y1] = scr(c, qa), [x2, y2] = scr(c, qb);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
 
-  function drawSide(ctx, inc, t, zoom) {
-    const G = 172;
+  function cameraFor(kind, inc, t, zoom) {
+    const fe = focusPos(inc, t), b = ballPos(inc, t);
+    let pos, tgt, f;
+    if (kind === "ojos") {
+      // El árbitro sigue la jugada desde atrás y en diagonal, con algo de retraso
+      const lb = ballPos(inc, Math.max(0, t - 0.15));
+      pos = [clamp(lb.x - 40, 14, 262), clamp(lb.y + 24, 12, 188), 10];
+      tgt = [b.x, b.y, 3]; f = 330;
+    } else if (kind === "tribuna") { pos = [fe.x, 300, 85]; tgt = [fe.x, fe.y, 2]; f = 600; }
+    else if (kind === "porteria") { pos = [352, 100 + (fe.y - 100) * 0.4, 28]; tgt = [fe.x, fe.y, 4]; f = 520; }
+    else { pos = [fe.x, -100, 85]; tgt = [fe.x, fe.y, 2]; f = 600; }
+    if (zoom) { f *= 3.5; tgt = [fe.x, fe.y, inc.focusZ ?? 4]; }
+    return makeCam(pos, tgt, f);
+  }
+
+  let CROWD_IMG = null;
+  function crowdImg() {
+    if (CROWD_IMG) return CROWD_IMG;
+    const cv = document.createElement("canvas"); cv.width = CW; cv.height = CH;
+    const g = cv.getContext("2d");
+    g.fillStyle = "#121a23"; g.fillRect(0, 0, CW, CH);
+    let s = 5;
+    const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    const cols = ["#2c4a63", "#3a566e", "#7cc4f0", "#5a3a33", "#6b4a3a", "#39444f", "#7a8a96"];
+    for (let y = 0; y < CH; y += 3) for (let x = 0; x < CW; x += 3) { g.fillStyle = cols[(r() * cols.length) | 0]; g.fillRect(x + ((r() * 2) | 0), y + ((r() * 2) | 0), 1, 1); }
+    return (CROWD_IMG = cv);
+  }
+
+  function draw3D(ctx, inc, t, kind, zoom, line, labels) {
+    const c = cameraFor(kind, inc, t, zoom);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#1a2330"; ctx.fillRect(0, 0, W, H);
-    for (const [x, y, c] of CROWD) { ctx.fillStyle = c; ctx.fillRect(x, y, 2, 2); }
-    for (let x = 0; x < W; x += 40) { ctx.fillStyle = (x / 40) % 2 ? "#243b56" : COL.amber; ctx.fillRect(x, 108, 40, 12); }
-    for (let x = 0; x < W; x += 20) { ctx.fillStyle = (x / 20) % 2 ? COL.pitch2 : COL.pitch; ctx.fillRect(x, 120, 20, H - 120); }
-    if (zoom) {
-      const s = 2.5;
-      ctx.setTransform(s, 0, 0, s, Math.round(W / 2 - inc.side.focus * s), Math.round(H / 2 + 30 - (G - 18) * s));
+    ctx.drawImage(crowdImg(), 0, 0);
+    // césped
+    poly3(ctx, c, [[-80, -60, 0], [400, -60, 0], [400, 260, 0], [-80, 260, 0]], "#24522f");
+    for (let i = 1; i < 24; i += 2) { const x = -80 + i * 20; poly3(ctx, c, [[x, -60, 0], [x + 20, -60, 0], [x + 20, 260, 0], [x, 260, 0]], "#2a5f38"); }
+    // vallas publicitarias en el lado lejano
+    const by = c.pos[1] > 100 ? -6 : 206;
+    for (let x = -80, i = 0; x < 400; x += 32, i++) poly3(ctx, c, [[x, by, 0], [x + 32, by, 0], [x + 32, by, 4], [x, by, 4]], i % 2 ? "#243b56" : "#8a6a24");
+    // líneas
+    ctx.strokeStyle = "rgba(228,236,224,.9)"; ctx.lineWidth = 1; ctx.lineCap = "butt";
+    const L = pts => { for (let i = 0; i < pts.length - 1; i++) seg3(ctx, c, [pts[i][0], pts[i][1], 0.05], [pts[i + 1][0], pts[i + 1][1], 0.05]); };
+    L([[10, 6], [304, 6], [304, 194], [10, 194], [10, 6]]);
+    L([[304, 46], [256, 46], [256, 154], [304, 154]]);
+    L([[304, 74], [290, 74], [290, 126], [304, 126]]);
+    const a0 = Math.acos(-16 / 24), arc = [], cc = [];
+    for (let i = 0; i <= 12; i++) { const g = a0 + (2 * Math.PI - 2 * a0) * i / 12; arc.push([272 + 24 * Math.cos(g), 100 + 24 * Math.sin(g)]); }
+    for (let i = 0; i <= 16; i++) { const g = -Math.PI / 2 + Math.PI * i / 16; cc.push([10 + 22 * Math.cos(g), 100 + 22 * Math.sin(g)]); }
+    L(arc); L(cc); L([[271.5, 100], [272.5, 100]]);
+    if (line) {
+      const lx = offsideX(inc, t);
+      ctx.strokeStyle = COL.amber; ctx.lineWidth = 2;
+      seg3(ctx, c, [lx, 6, 0.1], [lx, 194, 0.1]);
     }
-    for (const f of inc.side.figs) drawFigure(ctx, f, at(f.k, t).x, f.pose(t), G);
-    const b = at(inc.side.ball, t);
-    ctx.fillStyle = COL.ball; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
-    ctx.beginPath(); ctx.arc(b.x, G - 2.5 - b.y, 2.5, 0, 7); ctx.fill(); ctx.stroke();
+    // sombras
+    ctx.fillStyle = "rgba(0,0,0,.32)";
+    for (const e of inc.ents) {
+      const p = at(e.k, t), q = proj(c, [p.x, p.y, 0]);
+      if (q) { ctx.beginPath(); ctx.ellipse(q.x, q.y, Math.max(1.5, 1.6 * q.s), Math.max(0.8, 0.55 * q.s), 0, 0, 7); ctx.fill(); }
+    }
+    const b = ballPos(inc, t), bq = proj(c, [b.x, b.y, 0]);
+    if (bq) { ctx.beginPath(); ctx.ellipse(bq.x, bq.y, Math.max(1, 0.6 * bq.s), Math.max(0.5, 0.25 * bq.s), 0, 0, 7); ctx.fill(); }
+    // jugadores, balón y portería, del más lejano al más cercano
+    const depth = p => V.dot(V.sub(p, c.pos), c.fw);
+    const objs = inc.ents.map(e => { const p = at(e.k, t); return { d: depth([p.x, p.y, 4]), fn: () => drawPlayer3(ctx, c, e, inc, t, labels) }; });
+    objs.push({ d: depth([b.x, b.y, b.z]), fn: () => drawBall3(ctx, c, b) });
+    objs.push({ d: depth([307, 100, 7]), fn: () => drawGoal3(ctx, c) });
+    objs.sort((p, q) => q.d - p.d).forEach(o => o.fn());
   }
 
-  function drawFigure(ctx, f, x, pose, G) {
-    const L = 18, T = 17, R = 4.5, d = f.dir, rad = Math.PI / 180;
-    ctx.save();
-    ctx.translate(x, G);
-    ctx.fillStyle = "rgba(0,0,0,.3)";
-    ctx.beginPath(); ctx.ellipse(0, 0, 10, 2, 0, 0, 7); ctx.fill();
-    if (pose.fall) ctx.rotate(d * pose.fall * 1.35);
-    const hipY = pose.slide ? -5 : -L + 1;
-    const leg = a => [d * Math.sin(a * rad) * L, hipY + Math.cos(a * rad) * L];
-    ctx.lineCap = "round";
-    // piernas
-    ctx.strokeStyle = "#e3c9a8"; ctx.lineWidth = 2.6;
-    const fB = leg(pose.legB), fF = leg(pose.legF);
-    ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(...fB); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(...fF); ctx.stroke();
-    // botas
-    ctx.fillStyle = "#111";
-    for (const [fx, fy] of [fB, fF]) ctx.fillRect(fx - 2, fy - 1.5, 4, 3);
-    if (pose.studs) {
-      // tacos visibles: suela mirando al rival
-      ctx.fillStyle = "#d8d8d8";
-      const a = pose.legF * rad, nx = d * Math.cos(a), ny = -Math.sin(a);
-      for (const k of [-1.6, 0, 1.6]) ctx.fillRect(fF[0] + d * Math.sin(a) * 2 + nx * k - 0.5, fF[1] + Math.cos(a) * 2 + ny * k - 0.5, 1.2, 1.2);
+  function drawGoal3(ctx, c) {
+    ctx.lineCap = "butt";
+    ctx.strokeStyle = "rgba(235,240,235,.28)"; ctx.lineWidth = 1;
+    for (let y = 90; y <= 110; y += 2.5) { seg3(ctx, c, [304, y, 14], [311, y, 11]); seg3(ctx, c, [311, y, 0], [311, y, 11]); }
+    for (let z = 0; z <= 11; z += 2.2) seg3(ctx, c, [311, 90, z], [311, 110, z]);
+    for (const y of [90, 110]) for (let x = 304; x <= 311; x += 2.3) seg3(ctx, c, [x, y, 0], [x, y, 14 - (x - 304) * 3 / 7]);
+    const q = proj(c, [304, 100, 7]);
+    ctx.strokeStyle = "#f4f4f0"; ctx.lineWidth = q ? Math.max(1.5, 0.3 * q.s) : 1.5;
+    seg3(ctx, c, [304, 90, 0], [304, 90, 14]); seg3(ctx, c, [304, 110, 0], [304, 110, 14]); seg3(ctx, c, [304, 90, 14], [304, 110, 14]);
+  }
+
+  function drawBall3(ctx, c, b) {
+    const q = proj(c, [b.x, b.y, b.z + 0.65]);
+    if (!q) return;
+    const r = Math.max(1.4, 0.65 * q.s);
+    ctx.fillStyle = COL.ball; ctx.strokeStyle = COL.dark; ctx.lineWidth = Math.max(0.6, r * 0.2);
+    ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 7); ctx.fill(); ctx.stroke();
+  }
+
+  function vel(k, t) {
+    const t0 = Math.max(0, t - 0.01), t1 = Math.min(1, t + 0.01), a = at(k, t0), b = at(k, t1);
+    return { x: (b.x - a.x) / (t1 - t0), y: (b.y - a.y) / (t1 - t0) };
+  }
+  // Hacia dónde mira un jugador: hacia donde corre; si está quieto, al punto indicado o al balón.
+  function facing(e, inc, t) {
+    const freeze = Math.min(e.fall ?? 2, e.slide ?? 2);
+    const tt = t >= freeze ? freeze - 0.02 : t;
+    const v = vel(e.k, tt), sp = Math.hypot(v.x, v.y);
+    if (sp > 12) return { u: { x: v.x / sp, y: v.y / sp }, sp: t >= freeze ? 0 : sp };
+    const p = at(e.k, t), tg = e.face ? { x: e.face[0], y: e.face[1] } : ballPos(inc, t);
+    const dx = tg.x - p.x, dy = tg.y - p.y, d = Math.hypot(dx, dy) || 1;
+    return { u: { x: dx / d, y: dy / d }, sp: 0 };
+  }
+
+  // Puntos del cuerpo en coordenadas locales: [adelante, lado, altura]
+  function bodyLocal(e, inc, t, sp, p, u, v) {
+    const running = sp > 12, sw = running ? Math.sin(t * 44 + e.id.charCodeAt(1)) : 0;
+    const lean = running ? 0.6 : 0.1;
+    const P = {
+      hip: [0, 0, 5.2], neck: [lean, 0, 8.6], head: [lean + 0.15, 0, 9.75],
+      footL: [sw * 2, 0.7, running ? Math.max(0, sw) * 0.9 : 0], footR: [-sw * 2, -0.7, running ? Math.max(0, -sw) * 0.9 : 0],
+      handL: [-sw * 1.3 + 0.1, 1.45, 5.9], handR: [sw * 1.3 + 0.1, -1.45, 5.9], studs: false
+    };
+    const mix = (A, B, m) => A.map((x, i) => x + (B[i] - x) * m);
+    if (e.arms === "tucked") { P.handL = [0.35, 1.05, 5.9]; P.handR = [0.35, -1.05, 5.9]; }
+    if (e.kick) {
+      const K = e.kick;
+      const m = t < K.t0 ? 0 : t < K.t1 ? (t - K.t0) / (K.t1 - K.t0) : t < K.t2 ? 1 : clamp(1 - (t - K.t2) / 0.1, 0, 1);
+      if (m > 0) {
+        const tp = at(inc.ents.find(x => x.id === K.target).k, Math.min(t, K.t1));
+        const dx = tp.x - p.x, dy = tp.y - p.y, a = dx * u.x + dy * u.y, b = dx * v.x + dy * v.y;
+        P.footR = mix(P.footR, [a - 0.5, b * 0.9, K.h], m); P.footL = mix(P.footL, [-0.8, 0.7, 0], m);
+        P.neck = mix(P.neck, [-1.1, 0, 8.2], m); P.head = mix(P.head, [-1.4, 0, 9.3], m); P.hip = mix(P.hip, [0, 0, 4.6], m);
+        P.studs = m > 0.6;
+      }
     }
-    // tronco
-    const lean = (pose.lean || 0) * rad;
-    const sx = d * Math.sin(lean) * T, sy = hipY - Math.cos(lean) * T;
-    ctx.strokeStyle = f.c; ctx.lineWidth = 5.5;
-    ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(sx, sy); ctx.stroke();
-    // brazos
-    ctx.strokeStyle = "#e3c9a8"; ctx.lineWidth = 2;
-    const arm = pose.armsUp ? [d * 6, -11] : [-d * 5, 10];
-    ctx.beginPath(); ctx.moveTo(sx, sy + 1); ctx.lineTo(sx + arm[0], sy + arm[1]); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(sx, sy + 1); ctx.lineTo(sx - arm[0] * 0.6, sy + Math.abs(arm[1])); ctx.stroke();
-    // cabeza
-    ctx.fillStyle = "#e3c9a8"; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
-    ctx.beginPath(); ctx.arc(sx + d * Math.sin(lean) * (R + 1), sy - Math.cos(lean) * (R + 1), R, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.restore();
+    if (e.slide !== undefined && t >= e.slide) {
+      const m = clamp((t - e.slide) / 0.08, 0, 1);
+      P.hip = mix(P.hip, [-1, 0, 1.2], m); P.neck = mix(P.neck, [-3.4, 0, 3.2], m); P.head = mix(P.head, [-4.2, 0, 3.9], m);
+      P.footR = mix(P.footR, [3.6, -0.3, 0.35], m); P.footL = mix(P.footL, [0.8, 0.9, 0.25], m);
+      P.handL = mix(P.handL, [-2.6, 1.6, 0.3], m); P.handR = mix(P.handR, [-2.6, -1.6, 0.3], m);
+    }
+    if (e.dive && e.fall !== undefined && t >= e.fall) { P.handL = [1.6, 1.2, 11]; P.handR = [1.6, -1.2, 11]; }
+    const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    P.hipL = add(P.hip, [0, 0.6, 0]); P.hipR = add(P.hip, [0, -0.6, 0]);
+    P.shL = add(P.neck, [0, 1.0, -0.3]); P.shR = add(P.neck, [0, -1.0, -0.3]);
+    P.elbL = mix(P.shL, P.handL, 0.45); P.elbR = mix(P.shR, P.handR, 0.45);
+    return P;
+  }
+
+  function drawPlayer3(ctx, c, e, inc, t, labels) {
+    const p = at(e.k, t), F = facing(e, inc, t), u = F.u, v = { x: -u.y, y: u.x };
+    const P = bodyLocal(e, inc, t, F.sp, p, u, v);
+    const th = e.fall !== undefined && t > e.fall ? clamp((t - e.fall) / 0.12, 0, 1) * 1.42 : 0;
+    const W3 = q => {
+      let [a, b, z] = q;
+      if (th) { const a2 = a * Math.cos(th) + z * Math.sin(th); z = Math.max(0.2, z * Math.cos(th) - a * Math.sin(th)); a = a2; }
+      return [p.x + a * u.x + b * v.x, p.y + a * u.y + b * v.y, z];
+    };
+    const Q = {};
+    for (const k in P) if (Array.isArray(P[k])) Q[k] = proj(c, W3(P[k]));
+    const mid = proj(c, [p.x, p.y, 5]);
+    if (!mid) return;
+    const s = mid.s, lw = m => Math.max(1, m * s);
+    const ln = (a, b, col, w) => {
+      if (!Q[a] || !Q[b]) return;
+      ctx.strokeStyle = col; ctx.lineWidth = lw(w);
+      ctx.beginPath(); ctx.moveTo(Q[a].x, Q[a].y); ctx.lineTo(Q[b].x, Q[b].y); ctx.stroke();
+    };
+    const col = teamColor(e), shorts = e.t === "N" ? "#eef2f4" : "#23262b", skin = "#d9b896";
+    ctx.lineCap = "round";
+    ln("hipL", "footL", skin, 0.6); ln("hipR", "footR", skin, 0.6);
+    ctx.fillStyle = "#111";
+    for (const f of ["footL", "footR"]) if (Q[f]) { const r = Math.max(1, 0.45 * s); ctx.fillRect(Q[f].x - r, Q[f].y - r, 2 * r, 2 * r); }
+    if (P.studs) {
+      // tacos por delante, mirando al rival
+      ctx.fillStyle = "#e8e8e8";
+      const r = Math.max(0.8, 0.16 * s);
+      for (const k of [-0.3, 0, 0.3]) { const q = proj(c, W3([P.footR[0] + 0.5, P.footR[1] + k, P.footR[2]])); if (q) ctx.fillRect(q.x - r, q.y - r, 2 * r, 2 * r); }
+    }
+    ln("hipL", "hipR", shorts, 1.1);
+    ln("hip", "neck", col, 1.9);
+    ln("shL", "handL", skin, 0.5); ln("shR", "handR", skin, 0.5);
+    ln("shL", "elbL", col, 0.62); ln("shR", "elbR", col, 0.62);
+    if (Q.head) {
+      const r = Math.max(1.3, 0.85 * s);
+      ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(Q.head.x, Q.head.y, r, 0, 7); ctx.fill();
+      ctx.fillStyle = "#2b211a"; ctx.beginPath(); ctx.arc(Q.head.x, Q.head.y - r * 0.25, r * 0.85, Math.PI, 0); ctx.fill();
+      if (labels) {
+        ctx.font = "16px VT323, monospace"; ctx.textAlign = "center";
+        ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.fillStyle = col;
+        const y = Q.head.y - r - 4;
+        ctx.strokeText(dorsal(e), Q.head.x, y); ctx.fillText(dorsal(e), Q.head.x, y);
+      }
+    }
   }
 
   // ---------- Arranque (conserva la partida si la página se actualiza) ----------
