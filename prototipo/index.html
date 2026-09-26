@@ -361,11 +361,48 @@
     let s = Math.abs(Math.floor(seed)) % 2147483647 || 1;
     return () => (s = (s * 16807) % 2147483647) / 2147483647;
   }
-  const HOME = [["Dunavölgy SE", "DUN", "Dunavölgy"], ["Tiszapart FC", "TIS", "Tiszapart"], ["Szénbánya SC", "SZÉ", "Szénbánya"], ["Nyírség AC", "NYÍ", "Nyírség"]];
-  const AWAY = [["Kőhegyi Dózsa", "DÓZ", "Dózsa"], ["Balatoni Sólyom", "BAL", "Sólyom"], ["Mátrai Bányász", "MÁT", "Bányász"], ["Pusztai Vándor", "PUS", "Vándor"]];
+  // Colores base de las equipaciones (cada uno tiene su rampa luz/base/sombra en la paleta)
+  const KC = { white: "#c8d0d6", black: "#2a323d", sky: "#7cc4f0", red: "#d8232a", navy: "#1f3470", royal: "#1f4eb8", yellow: "#f2c81c", green: "#1f9a4a" };
+  const FAM = { [KC.white]: "W", [KC.black]: "K", [KC.sky]: "S", [KC.red]: "R", [KC.navy]: "B", [KC.royal]: "B", [KC.yellow]: "Y", [KC.green]: "G" };
+  const kit = (shirt, shorts, socks, pattern, second) => ({ shirt: KC[shirt], shorts: KC[shorts], socks: KC[socks], pattern, second: second && KC[second] });
+  // Partido rápido: clubes reales (solo nombre y colores; sin escudos ni jugadores reales)
+  const TEAMS = [
+    ["Real Madrid", "RMA", "Real Madrid", kit("white", "white", "white"), kit("navy", "navy", "navy")],
+    ["FC Barcelona", "BAR", "Barça", kit("royal", "navy", "navy", "stripes", "red"), kit("yellow", "yellow", "yellow")],
+    ["Atlético de Madrid", "ATM", "Atleti", kit("red", "navy", "red", "stripes", "white"), kit("navy", "navy", "navy")],
+    ["Manchester United", "MUN", "United", kit("red", "white", "black"), kit("white", "white", "white")],
+    ["Liverpool", "LIV", "Liverpool", kit("red", "red", "red"), kit("white", "black", "white")],
+    ["Manchester City", "MCI", "City", kit("sky", "white", "sky"), kit("navy", "navy", "navy")],
+    ["Arsenal", "ARS", "Arsenal", kit("red", "white", "white"), kit("yellow", "navy", "yellow")],
+    ["Chelsea", "CHE", "Chelsea", kit("royal", "royal", "white"), kit("white", "white", "white")],
+    ["Bayern de Múnich", "BAY", "Bayern", kit("red", "red", "red"), kit("white", "white", "white")],
+    ["Juventus", "JUV", "Juve", kit("white", "black", "white", "stripes", "black"), kit("yellow", "yellow", "yellow")],
+    ["AC Milan", "MIL", "Milan", kit("red", "white", "black", "stripes", "black"), kit("white", "white", "white")],
+    ["Inter de Milán", "INT", "Inter", kit("royal", "black", "black", "stripes", "black"), kit("white", "white", "white")],
+    ["Paris Saint-Germain", "PSG", "PSG", kit("navy", "navy", "navy", "vband", "red"), kit("white", "white", "white")],
+    ["Borussia Dortmund", "BVB", "Dortmund", kit("yellow", "black", "yellow"), kit("black", "black", "black")],
+    ["Boca Juniors", "BOC", "Boca", kit("navy", "navy", "navy", "hband", "yellow"), kit("white", "white", "white")],
+    ["River Plate", "RIV", "River", kit("white", "black", "white", "sash", "red"), kit("black", "black", "black")],
+    ["Ferencváros", "FTC", "Fradi", kit("green", "white", "green", "stripes", "white"), kit("white", "white", "white")],
+    ["Celtic", "CEL", "Celtic", kit("green", "white", "white", "hoops", "white"), kit("black", "black", "black")],
+    ["Flamengo", "FLA", "Flamengo", kit("red", "white", "black", "hoops", "black"), kit("white", "white", "white")],
+    ["Ajax", "AJA", "Ajax", kit("white", "white", "white", "vband", "red"), kit("navy", "navy", "navy")]
+  ];
+  // Historia: clubes húngaros inventados
+  const STORY_TEAMS = {
+    N: ["Dunavölgy SE", "DUN", "Dunavölgy"], S: ["Kőhegyi Dózsa", "DÓZ", "Dózsa"],
+    kits: { N: { shirt: KC.sky, shorts: KC.white, socks: KC.sky, gk: "#f2d65c" }, S: { shirt: "#f07a5a", shorts: KC.black, socks: "#f07a5a", gk: "#b98ee8" } }
+  };
+  let KIT = STORY_TEAMS.kits;
   function makeTeams(seed) {
-    const r = rng(seed * 7 + 3);
-    return { N: HOME[(r() * HOME.length) | 0], S: AWAY[(r() * AWAY.length) | 0] };
+    const r = rng(seed * 7 + 3), h = (r() * TEAMS.length) | 0;
+    let a = (r() * (TEAMS.length - 1)) | 0; if (a >= h) a++;
+    const H = TEAMS[h], A = TEAMS[a], hk = H[3];
+    const clash = (x, y) => FAM[x.shirt] === FAM[y.shirt];
+    const ak = [A[3], A[4], kit("black", "black", "black"), kit("white", "white", "white")].find(k => !clash(k, hk));
+    // porteros de un color que no choque con ninguno de los dos equipos
+    const gks = ["#f2d65c", "#b98ee8", KC.green].filter(g => ![hk.shirt, ak.shirt].some(sh => FAM[sh] === (FAM[g] || (g === "#f2d65c" ? "Y" : "P"))));
+    return { N: H.slice(0, 3), S: A.slice(0, 3), kits: { N: { ...hk, gk: gks[0] }, S: { ...ak, gk: gks[1] || gks[0] } } };
   }
   const nrm = (x, y) => { const l = Math.hypot(x, y) || 1; return { x: x / l, y: y / l }; };
   const gk = (team, keys, extra = {}) => ({ id: "GK" + team, t: team, gk: true, k: keys, ...extra });
@@ -700,8 +737,12 @@
   }
   function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
   const fullName = r => `${r.apellido} ${r.nombre}`; // orden húngaro: apellido primero
-  const teamsOf = s => s.mode === "quick" ? makeTeams(s.seed) : { N: HOME[0], S: AWAY[0] };
-  function useMatch(s) { INCIDENTS = s.mode === "quick" ? (s.clips.length ? s.clips : PROLOGUE) : PROLOGUE; return s; }
+  const teamsOf = s => s.mode === "quick" ? makeTeams(s.seed) : STORY_TEAMS;
+  function useMatch(s) {
+    INCIDENTS = s.mode === "quick" ? (s.clips.length ? s.clips : PROLOGUE) : PROLOGUE;
+    KIT = teamsOf(s).kits;
+    return s;
+  }
   function startQuick() {
     clearSave();
     state = fresh();
@@ -721,7 +762,12 @@
     const hud = $("#hud");
     hud.hidden = !MATCH_SCREENS.includes(state.screen);
     const tm = teamsOf(state);
-    $("#tN").textContent = tm.N[1]; $("#tS").textContent = tm.S[1];
+    for (const k of ["N", "S"]) {
+      const el = $("#t" + k), sh = tm.kits[k].shirt;
+      el.textContent = tm[k][1];
+      el.style.background = sh;
+      el.style.color = ["W", "Y", "S"].includes(FAM[sh]) || sh === "#f07a5a" ? "#0b0e12" : "#f4f4ee";
+    }
     $("#sN").textContent = state.score.N;
     $("#sS").textContent = state.score.S;
     const inc = INCIDENTS[state.idx];
@@ -774,12 +820,12 @@
       <section class="menu-screen">
         <canvas id="bg" width="320" height="180" aria-hidden="true"></canvas>
         <div class="menu-inner">
-          <p class="eyebrow">Prototipo · Partido rápido</p>
+          <p class="eyebrow">Prototipo · Modo rápido</p>
           <h1 class="title">Referee,<br><span>Please</span></h1>
           <p class="tagline">Nadie llega a una final sin deber favores.</p>
           <nav class="menu" aria-label="Menú principal">
             ${saved ? `<button class="mi" id="mContinue"><span>Continuar</span><small>${esc(describeSave(saved))}</small></button>` : ""}
-            <button class="mi" id="mNew"><span>Partido rápido</span><small>5 jugadas al azar</small></button>
+            <button class="mi" id="mNew"><span>Partido rápido</span><small>Clubes reales · 8 jugadas al azar</small></button>
             <div class="confirm" id="mConfirm" hidden>
               <p>Se borrará la partida guardada.</p>
               <div class="row"><button class="btn sm" id="mYes">Empezar de nuevo</button><button class="btn sm" id="mNo">Cancelar</button></div>
@@ -1168,6 +1214,7 @@
   function newCur() { return { phase: "intro", varOpen: false, whistled: false, whistleT: null, opts: null }; }
 
   function startQuickMatch() {
+    KIT = teamsOf(state).kits;
     state.clips = [generateClip(state, 0)];
     INCIDENTS = state.clips;
     state.idx = 0; state.cur = newCur();
@@ -1584,7 +1631,7 @@
   const focusPos = (inc, t) => at(inc.ents.find(e => e.id === inc.focus).k, t);
   const ballPos = (inc, t) => { const b = at(inc.ball, t); return { x: b.x, y: b.y, z: inc.ballZ ? at(inc.ballZ, t).x : 0 }; };
   const dorsal = e => e.gk ? "1" : e.id.replace(/\D/g, "");
-  const teamColor = e => e.t === "N" ? (e.gk ? COL.gkN : COL.norte) : (e.gk ? COL.gkS : COL.sur);
+  const teamColor = e => e.gk ? KIT[e.t].gk : KIT[e.t].shirt;
 
   function draw() {
     const cv = $("#cv");
@@ -1689,7 +1736,9 @@
   const PALETTE = ["#0b0e12", "#1a1f27", "#2a323d", "#3d4854", "#5d6b78", "#8a98a4", "#c8d0d6", "#f4f4ee",
     "#16301e", "#1f4428", "#2a5c35", "#377444", "#4f9150", "#2b5f8a", "#3f86b8", "#7cc4f0",
     "#b8e2f8", "#6e2a1c", "#b8452b", "#f07a5a", "#f6b39a", "#5a3a24", "#a8744e", "#d9a77e",
-    "#f0cfa6", "#35241a", "#8a6a14", "#d8a21c", "#f2d65c", "#4a2f6e", "#8e68c4", "#1f4e8c"].map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    "#f0cfa6", "#35241a", "#8a6a14", "#d8a21c", "#f2d65c", "#4a2f6e", "#8e68c4", "#1f4e8c",
+    "#ff5a4a", "#d8232a", "#8e1418", "#3a5aa8", "#1f3470", "#101c40", "#4a7ae0", "#1f4eb8", "#12307a",
+    "#fff27a", "#f2c81c", "#a8860c", "#5ad07a", "#1f9a4a", "#0f5a2a"].map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const LUT = new Uint8Array(32768).fill(255);
   function nearestColor(r, g, b) {
@@ -2074,14 +2123,16 @@
   }
 
   // Kits: [camiseta, pantalón, medias]
-  const KITS = { N: ["#7cc4f0", "#c8d0d6", "#7cc4f0"], S: ["#f07a5a", "#2a323d", "#f07a5a"] };
   const SKIN = "#d9a77e", HAIR = "#35241a", BOOT = "#0b0e12";
   // Rampas de la paleta de 32 colores: [luz, base, sombra]
   const RAMPS = {
     "#7cc4f0": ["#b8e2f8", "#7cc4f0", "#3f86b8"], "#f07a5a": ["#f6b39a", "#f07a5a", "#b8452b"],
     "#c8d0d6": ["#f4f4ee", "#c8d0d6", "#8a98a4"], "#2a323d": ["#3d4854", "#2a323d", "#1a1f27"],
     "#d9a77e": ["#f0cfa6", "#d9a77e", "#a8744e"], "#35241a": ["#5a3a24", "#35241a", "#35241a"],
-    "#f2d65c": ["#f2d65c", "#d8a21c", "#8a6a14"], "#b98ee8": ["#8e68c4", "#8e68c4", "#4a2f6e"]
+    "#f2d65c": ["#f2d65c", "#d8a21c", "#8a6a14"], "#b98ee8": ["#8e68c4", "#8e68c4", "#4a2f6e"],
+    "#d8232a": ["#ff5a4a", "#d8232a", "#8e1418"], "#1f3470": ["#3a5aa8", "#1f3470", "#101c40"],
+    "#1f4eb8": ["#4a7ae0", "#1f4eb8", "#12307a"], "#f2c81c": ["#fff27a", "#f2c81c", "#a8860c"],
+    "#1f9a4a": ["#5ad07a", "#1f9a4a", "#0f5a2a"]
   };
   function drawPlayer3(g, c, B, labels) {
     const { e, p, u, v, pts } = B;
@@ -2091,7 +2142,7 @@
     for (const k in pts) Q[k] = proj(c, pts[k]);
     const s = mid.s, px = m => Math.max(1, Math.round(m * s));
     const fog = clamp((mid.d - 150) / 700, 0, 0.5);
-    const [shirt, shorts, socks] = e.gk ? [teamColor(e), "#2a323d", teamColor(e)] : KITS[e.t];
+    const K = KIT[e.t], shirt = e.gk ? K.gk : K.shirt, shorts = e.gk ? KC.black : K.shorts, socks = e.gk ? K.gk : K.socks;
     // luz principal: la torre más cercana
     const T = TOWERS.reduce((a, b) => Math.hypot(b[0] - p.x, b[1] - p.y) < Math.hypot(a[0] - p.x, a[1] - p.y) ? b : a);
     const lx = T[0] - p.x, ly = T[1] - p.y, litL = (v.x * lx + v.y * ly) > 0; // ¿el lado izquierdo (L) mira a la luz?
@@ -2131,6 +2182,17 @@
     // a lo lejos el sprite es tan pequeño que el contorno lo taparía todo
     if (s >= 1.1) for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) paint(OUT, dx, dy);
     paint(null, 0, 0);
+    // dibujo de la camiseta: rayas, aros, franja o banda
+    if (!e.gk && K.pattern && s >= 1 && Q.waistL && Q.waistR && Q.shL && Q.shR) {
+      const m = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
+      const sc = col(K.second), w = Math.max(1, Math.round(0.3 * s));
+      const L = (a, b, ww = w) => pxLine(g, a.x, a.y, b.x, b.y, ww, sc);
+      if (K.pattern === "stripes") for (const k of [0.25, 0.75]) L(m(Q.waistL, Q.waistR, k), m(Q.shL, Q.shR, k));
+      else if (K.pattern === "hoops") for (const k of [0.3, 0.68]) L(m(Q.waistL, Q.shL, k), m(Q.waistR, Q.shR, k));
+      else if (K.pattern === "vband") L(m(Q.waistL, Q.waistR, 0.5), m(Q.shL, Q.shR, 0.5), Math.max(1, Math.round(0.55 * s)));
+      else if (K.pattern === "hband") L(m(Q.waistL, Q.shL, 0.55), m(Q.waistR, Q.shR, 0.55), Math.max(1, Math.round(0.55 * s)));
+      else if (K.pattern === "sash") L(Q.waistR, Q.shL, Math.max(1, Math.round(0.45 * s)));
+    }
     // brillo en el borde iluminado del torso
     if (s > 1.2 && Q.shL && Q.waistL && Q.shR && Q.waistR) {
       const [a, b] = litL ? [Q.shL, Q.waistL] : [Q.shR, Q.waistR];
@@ -2154,7 +2216,7 @@
         g.fillRect(darkSide > 0 ? hx + 1 : hx - r, hy - r + 1, r, 2 * r - 1);
         if (!away && r >= 3) { g.fillStyle = "#0b0e12"; g.fillRect(hx - 1, hy, 1, 1); g.fillRect(hx + 1, hy, 1, 1); }
       }
-      if (labels) pxNumber(g, dorsal(e), Q.head.x, Q.head.y - r - 9, teamColor(e));
+      if (labels) pxNumber(g, dorsal(e), Q.head.x, Q.head.y - r - 9, ["B", "K"].includes(FAM[shirt]) ? "#f4f4ee" : col(shirt, true));
     }
   }
 

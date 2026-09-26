@@ -134,6 +134,14 @@ amonestados tienden a reincidir. Los expulsados no vuelven a aparecer.
 
 Cada jugada sale de la semilla del partido y de su estado (temperatura y tarjetas).
 
+### Modo rápido vs. modo historia
+- **Modo rápido** (cultura pop): clubes reales conocidos (Real Madrid, Barça, Liverpool, Boca,
+  Ferencváros...), con sus colores y dibujos de camiseta en pixel art (rayas, aros, franja,
+  banda, banda diagonal) y segunda equipación si chocan. Solo nombre y colores: sin escudos ni
+  jugadores reales. *Si el juego se publica comercialmente, los nombres de clubes necesitan
+  licencia o pasar a nombres parecidos, como hacía el PES.*
+- **Modo historia** (profundidad): clubes húngaros inventados, corrupción y carrera de 1994 a 2019.
+
 ## 11. Próximos pasos (ideas)
 - [ ] Hablar con los jugadores: preguntar tras una caída (pueden mentir), calmar o amonestar
   protestas (idea 4).
