@@ -333,6 +333,16 @@
   });
   let state = fresh();
 
+  // Guardado automático en este navegador: si sales, vuelves donde estabas.
+  const SAVE_KEY = "referee-please-v01";
+  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {} }
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+      return s && s.screen && Array.isArray(s.log) ? s : null;
+    } catch (e) { return null; }
+  }
+
   // Estado de la vista (no se guarda)
   const view = { t: 0, cam: "cenital", zoom: false, line: false, anim: 0 };
 
@@ -340,6 +350,7 @@
   const screen = $("#screen");
 
   function renderHud() {
+    save();
     const hud = $("#hud");
     hud.hidden = state.screen === "intro";
     $("#sN").textContent = state.score.N;
@@ -451,6 +462,7 @@
   }
 
   function renderLog() {
+    save();
     const el = $("#log");
     if (!el) return;
     el.innerHTML = state.log.map(([who, txt]) => `<li><span class="who ${who.split(" ")[0].replace("Ú", "U").replace("É", "E")}">${esc(who)}</span><span>${esc(txt)}</span></li>`).join("");
@@ -582,6 +594,7 @@
 
   // ---------- Descanso ----------
   function renderHalf() {
+    save();
     const b = state.bribe;
     screen.innerHTML = `
       <section class="sheet">
@@ -822,7 +835,7 @@
 
   // ---------- Arranque (conserva la partida si la página se actualiza) ----------
   window.claude?.hot?.snapshot?.(() => ({ state }));
-  const start = data => { if (data && data.state) state = data.state; render(); };
+  const start = data => { state = (data && data.state) || load() || state; render(); };
   window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 })();
 </script>
