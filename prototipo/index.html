@@ -165,18 +165,17 @@
   .pay { max-width: 420px; }
   .pay td { border-bottom: 1px dashed #c9c1ad; }
   .pay tr.total td { border-bottom: 0; border-top: 2px solid #1f1c16; font-weight: 700; }
-  .rep-head { padding-right: 200px; }
-  .stamp { position: absolute; top: 28px; right: 24px; transform: rotate(-9deg); font-family: var(--f-display); font-weight: 700; font-size: clamp(16px, 3vw, 26px); padding: 6px 12px; border: 4px solid currentColor; opacity: .85; text-align: center; line-height: 1.05; max-width: 45%; }
+  .stamp { justify-self: start; transform: rotate(-4deg); font-family: var(--f-display); font-weight: 700; font-size: clamp(16px, 3vw, 26px); padding: 6px 12px; border: 4px solid currentColor; opacity: .85; text-align: center; line-height: 1.05; max-width: 45%; }
   .stamp.ok { color: #2f7a3a; } .stamp.mid { color: #b07800; } .stamp.bad { color: #b0271b; }
   .report .note { max-width: 62ch; margin: 0; }
-  @media (max-width: 560px) { .rep-head { padding-right: 0; } .stamp { position: static; justify-self: start; transform: rotate(-4deg); max-width: none; } }
+  
 
   @media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } }
 </style>
 
 <div id="app">
   <header class="hud" id="hud" hidden>
-    <div class="score"><span class="t n">DUN</span><b id="sN">0</b><span>–</span><b id="sS">0</b><span class="t s">DÓZ</span></div>
+    <div class="score"><span class="t n" id="tN">DUN</span><b id="sN">0</b><span>–</span><b id="sS">0</b><span class="t s" id="tS">DÓZ</span></div>
     <div class="clock" id="clock">0'</div>
     <div class="meters">
       <div class="meter"><label>Reputación <span id="repV"></span></label><div class="bar"><div class="fill" id="repF" style="background: var(--good)"></div></div></div>
@@ -214,7 +213,7 @@
 
 
   // ---------- Prólogo: final de Copa, mayo de 2019 ----------
-  const INCIDENTS = [
+  const PROLOGUE = [
     {
       minute: 12, title: "Contra por el centro",
       pre: [["ASISTENTE", "Atento: el Dunavölgy sale a la contra por el centro. El 8 levanta la cabeza..."]],
@@ -344,11 +343,276 @@
       ballZ: [[0, 0], [0.35, 0], [0.6, 9], [0.8, 12.5], [1, 5]]
     }
   ];
-  const HALF_AFTER = 2; // el descanso llega después de la jugada 3
+  const HALF_AFTER = 2; // en la historia, el descanso llega después de la jugada 3
+  let INCIDENTS = PROLOGUE;
+
+  // ---------- Partido rápido: jugadas aleatorias ----------
+  // Cada partido tiene una jugada de cada tipo, con variantes que cambian la decisión correcta.
+  // Todo sale de una semilla, así la partida guardada se puede reconstruir igual.
+  function rng(seed) {
+    let s = Math.abs(Math.floor(seed)) % 2147483647 || 1;
+    return () => (s = (s * 16807) % 2147483647) / 2147483647;
+  }
+  const HOME = [["Dunavölgy SE", "DUN", "Dunavölgy"], ["Tiszapart FC", "TIS", "Tiszapart"], ["Szénbánya SC", "SZÉ", "Szénbánya"], ["Nyírség AC", "NYÍ", "Nyírség"]];
+  const AWAY = [["Kőhegyi Dózsa", "DÓZ", "Dózsa"], ["Balatoni Sólyom", "BAL", "Sólyom"], ["Mátrai Bányász", "MÁT", "Bányász"], ["Pusztai Vándor", "PUS", "Vándor"]];
+  function makeTeams(seed) {
+    const r = rng(seed * 7 + 3);
+    return { N: HOME[(r() * HOME.length) | 0], S: AWAY[(r() * AWAY.length) | 0] };
+  }
+  const nrm = (x, y) => { const l = Math.hypot(x, y) || 1; return { x: x / l, y: y / l }; };
+
+  function generateMatch(seed) {
+    const r = rng(seed);
+    const R = (a, b) => a + (b - a) * r(), pick = a => a[(r() * a.length) | 0], chance = p => r() < p;
+    const teams = makeTeams(seed);
+    const gens = [genOffside, genBox, genHand, genTackle, genBuildup];
+    for (let i = gens.length - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; [gens[i], gens[j]] = [gens[j], gens[i]]; }
+    const mins = [];
+    while (mins.length < gens.length) { const m = 4 + ((r() * 86) | 0); if (mins.every(x => Math.abs(x - m) > 5)) mins.push(m); }
+    mins.sort((a, b) => a - b);
+    return gens.map((gen, i) => {
+      const atk = chance(0.6) ? "N" : "S", def = atk === "N" ? "S" : "N";
+      const ctx = { r, R, pick, chance, atk, def, name: k => teams[k][2] };
+      // el consejero acierta, se equivoca o no se moja
+      ctx.say = (right, wrong, neutral) => { const x = r(); return x < 0.55 ? right : x < 0.8 ? wrong : neutral; };
+      const inc = gen(ctx);
+      inc.minute = mins[i]; inc.atk = atk; inc.def = def;
+      // presión y reacción de la grada: la afición es la del equipo local (N)
+      const happy = ["La grada aplaude tu decisión.", "Ovación en el estadio.", "La grada local lo celebra."];
+      const angry = ["Pitada monumental.", "Te llueven insultos desde el fondo.", "Bronca enorme en la grada.", "Lanzan un mechero al campo."];
+      inc.options.forEach(o => {
+        const favTeam = o.fav === "atk" ? atk : def;
+        o.pressure = favTeam === "N" ? -o.mag : o.mag;
+        o.crowd = o.goal ? (atk === "N" ? `¡Gol del ${ctx.name(atk)}! La grada explota.` : `Gol del ${ctx.name(atk)}. Silencio en el estadio.`)
+          : pick(favTeam === "N" ? happy : angry);
+        o.goal = o.goal ? atk : undefined;
+      });
+      return inc;
+    });
+  }
+
+  const gk = (team, keys, extra = {}) => ({ id: "GK" + team, t: team, gk: true, k: keys, ...extra });
+  const pl = (team, num, keys, extra = {}) => ({ id: team + num, t: team, k: keys, ...extra });
+
+  // Fuera de juego: gol tras un pase al hueco. En fuera o habilitado por centímetros.
+  function genOffside({ R, chance, atk, def, name, say }) {
+    const L = R(222, 246), off = chance(0.5), m = (off ? 1 : -1) * R(0.9, 3.2);
+    const yA = R(80, 120), yD = yA + (chance(0.5) ? 1 : -1) * R(5, 12), ax = L + m;
+    const P = { x: L - R(48, 70), y: clamp(yA + R(-30, 30), 30, 170) }, shotY = R(92, 108);
+    const y6 = yA + (100 - yA) * 0.4, y8 = yA + (100 - yA) * 0.75;
+    const top = R(30, 60), bot = R(140, 170);
+    const cm = Math.round(Math.abs(m) * 18);
+    return {
+      title: "Pase al hueco",
+      pre: [["ASISTENTE", `El ${name(atk)} sale a la contra. El 8 busca el desmarque del 9...`]],
+      post: [["GRADA", atk === "N" ? "¡¡GOOOL!!" : "Silencio... gol del visitante."],
+        ["ASISTENTE", say(off ? "¡Bandera arriba! Para mí el 9 está en fuera." : "Bandera abajo. Para mí está habilitado.",
+          off ? "Bandera abajo. Para mí está habilitado." : "¡Bandera arriba! Para mí el 9 está en fuera.",
+          "No he visto bien la posición del 9. Decide tú.")]],
+      varHint: ["SALA VAR", say(off ? "Ojo, revisa la posición del 9 en el pase." : "Desde aquí parece en línea. Nada que revisar.",
+        off ? "Desde aquí parece en línea. Nada que revisar." : "Ojo, revisa la posición del 9 en el pase.",
+        "No vemos nada claro. Si quieres revisar, es cosa tuya.")],
+      events: [[0.3, "Pase"], [0.8, "Disparo"], [1, "Gol"]],
+      focus: atk + "9",
+      options: [
+        { label: "Gol válido", card: "g", grade: off ? "wrong" : "correct", fav: "atk", mag: 10, goal: true },
+        { label: "Anular: fuera de juego", card: "w", grade: off ? "correct" : "wrong", fav: "def", mag: 18 }
+      ],
+      truth: off ? "Anular: fuera de juego" : "Gol válido",
+      why: off ? `En el momento del pase, el 9 estaba ${cm} cm por delante del penúltimo defensor: fuera de juego.`
+        : `En el momento del pase, el 9 estaba ${cm} cm por detrás del penúltimo defensor: posición legal.`,
+      ents: [
+        pl(atk, 8, [[0, P.x, P.y], [0.3, P.x + 18, P.y + (yA - P.y) * 0.1], [1, P.x + 40, P.y]]),
+        pl(atk, 9, [[0, ax - 12, yA - 1], [0.3, ax, yA], [0.6, ax + 26, y6], [0.8, 282, y8], [1, 288, y8]]),
+        pl(atk, 7, [[0, L - R(20, 40), top - 10], [1, L + 4, top]]),
+        pl(def, 4, [[0, L + 3, yD], [0.3, L, yD], [0.6, L + 22, yD + (100 - yD) * 0.3], [1, L + 34, yD + (100 - yD) * 0.4]]),
+        pl(def, 5, [[0, L - R(10, 18), top + 6], [1, L + 12, top + 14]]),
+        pl(def, 3, [[0, L - R(10, 18), bot], [1, L + 10, bot - 10]]),
+        gk(def, [[0, 298, 100], [0.8, 294, 99], [1, 297, shotY < 100 ? shotY + 6 : shotY - 6]])
+      ],
+      ball: [[0, P.x + 2, P.y + 1], [0.3, P.x + 20, P.y + (yA - P.y) * 0.1], [0.6, ax + 28, y6], [0.8, 285, y8], [1, 306, shotY]],
+      ballZ: [[0, 0], [0.8, 0], [1, 2.5]]
+    };
+  }
+
+  // Entrada en el área: penalti de verdad o piscinazo.
+  function genBox({ R, chance, atk, def, say }) {
+    const pen = chance(0.5), side = chance(0.5) ? 1 : -1;
+    const C = { x: R(262, 276), y: 100 + side * R(14, 40) };
+    const a = nrm(R(0.7, 1), -side * R(0.35, 0.8));
+    let q = { x: -a.y, y: a.x }; if (Math.sign(q.y) !== side) q = { x: -q.x, y: -q.y };
+    const u = nrm(-a.x * 0.35 + q.x, -a.y * 0.35 + q.y); // el defensor llega desde el centro
+    const gap = R(9, 12);
+    const Ac = pen ? C : { x: C.x - a.x * gap, y: C.y - a.y * gap };        // atacante en el momento de la entrada
+    const T = C;                                                              // adonde va el pie del defensor
+    const Dc = { x: T.x - u.x * 3.6, y: T.y - u.y * 3.6 };
+    const d0 = R(22, 28), s0 = R(26, 32), fallT = pen ? 0.53 : R(0.58, 0.64);
+    const Bc = pen ? { x: C.x + a.x * 3, y: C.y + a.y * 3 } : C;
+    const P = (o, k) => [o.x, o.y].map((v, i) => v + [a.x, a.y][i] * k);
+    const Au = (k) => { const [x, y] = P(Ac, k); return [x, y]; };
+    return {
+      title: "Entrada en el área",
+      pre: [["ASISTENTE", "El 11 encara al defensor y entra en el área..."]],
+      post: [["GRADA", "¡¡PENALTI, PENALTI!!"],
+        ["ASISTENTE", say(pen ? "¡Penalti! Se lo ha llevado por delante." : "Para mí se ha tirado.",
+          pen ? "Para mí se ha tirado." : "¡Penalti! Se lo ha llevado por delante.",
+          "Ha caído dentro del área. No sé si hay contacto.")]],
+      varHint: ["SALA VAR", say(pen ? "Te recomendamos revisar: hay contacto." : "Revisa: el defensor toca balón.",
+        pen ? "Nada que revisar, parece limpio." : "Desde aquí parece penalti claro.",
+        "Es tu decisión.")],
+      events: [[0.5, "Entrada"], [fallT, "Caída"]],
+      focus: atk + "11", focusZ: 2,
+      options: [
+        { label: "Penalti", card: "w", grade: pen ? "correct" : "wrong", fav: "atk", mag: 8, goal: true },
+        { label: "Seguir jugando", card: "g", grade: pen ? "wrong" : "partial", fav: "def", mag: 8 },
+        { label: "Amarilla al 11 por simulación", card: "y", grade: pen ? "wrong" : "correct", fav: "def", mag: 15 }
+      ],
+      truth: pen ? "Penalti" : "Amarilla al 11 por simulación",
+      why: pen ? "El 3 no tocó el balón: su entrada se llevó por delante las piernas del 11. Penalti."
+        : "El 3 tocó primero el balón y no llegó a tocar al 11, que se tiró sin contacto. Amarilla por simulación; dejar seguir era aceptable, pero incompleto.",
+      ents: [
+        pl(atk, 11, [[0, ...Au(-s0)], [0.5, Ac.x, Ac.y], ...(pen ? [[0.53, ...Au(1.5)], [1, ...Au(4)]] : [[0.6, ...Au(5)], [1, ...Au(8)]])],
+          { fall: fallT, dive: !pen }),
+        pl(def, 3, [[0, Dc.x - u.x * d0, Dc.y - u.y * d0], [0.4, Dc.x - u.x * 8, Dc.y - u.y * 8], [0.5, Dc.x, Dc.y], [0.6, Dc.x + u.x * 1.2, Dc.y + u.y * 1.2], [1, Dc.x + u.x * 1.8, Dc.y + u.y * 1.8]],
+          { slide: 0.42 }),
+        pl(atk, 9, [[0, 250, 100 - side * 8], [1, 276, 100 - side * 12]]),
+        pl(def, 4, [[0, 264, 100 - side * 14], [1, 284, 100 - side * 6]]),
+        pl(def, 5, [[0, 232, 100 + side * 30], [1, 252, 100 + side * 34]]),
+        gk(def, [[0, 298, 100], [1, 296, 100 + side * 8]])
+      ],
+      ball: [[0, Ac.x - a.x * s0 + a.x * 3, Ac.y - a.y * s0 + a.y * 3], [0.5, Bc.x, Bc.y],
+        ...(pen ? [[0.7, C.x + a.x * 10, C.y + a.y * 10], [1, C.x + a.x * 16, C.y + a.y * 16]]
+          : [[0.75, C.x + u.x * 14 + a.x * 4, C.y + u.y * 14 + a.y * 4], [1, C.x + u.x * 22 + a.x * 6, C.y + u.y * 22 + a.y * 6]])],
+      ballZ: pen ? [[0, 0], [1, 0]] : [[0, 0], [0.5, 0], [0.6, 2.5], [0.75, 0]]
+    };
+  }
+
+  // Mano: brazo pegado al cuerpo (no es penalti) o separado (penalti), según la circular.
+  function genHand({ R, chance, atk, def, name, say }) {
+    const open = chance(0.5), cs = chance(0.5) ? 1 : -1;
+    const W0 = { x: R(250, 272), y: cs > 0 ? R(170, 180) : R(20, 30) };
+    const P = { x: R(274, 290), y: R(82, 118) };
+    const u = nrm(W0.x - P.x, W0.y - P.y), v = { x: -u.y, y: u.x }, sg = chance(0.5) ? 1 : -1;
+    const loc = open ? [0.3, sg * 2.3, 7.4] : [0.31, sg * 1.04, 6.3];
+    const C = { x: P.x + u.x * (loc[0] + 0.6) + v.x * loc[1], y: P.y + u.y * (loc[0] + 0.6) + v.y * loc[1] };
+    const y9 = P.y + R(-14, 14);
+    return {
+      title: "Centro al área",
+      pre: [["ASISTENTE", `Centro desde la banda del ${name(atk)}. El 9 ataca el primer palo...`]],
+      post: [["GRADA", "¡¡MANO, MANO!!"],
+        ["ASISTENTE", say(open ? "¡Mano clarísima, con el brazo abierto!" : "Le ha dado, pero tenía el brazo pegado.",
+          open ? "Le ha dado, pero tenía el brazo pegado." : "¡Mano clarísima, con el brazo abierto!",
+          "Creo que le ha dado al 2 en el brazo.")]],
+      varHint: ["SALA VAR", say(open ? "Revisa: brazo separado del cuerpo." : "Nada punible, el brazo está pegado.",
+        open ? "Nada punible, el brazo está pegado." : "Revisa: brazo separado del cuerpo.",
+        "Posible mano. Te recomendamos revisar.")],
+      events: [[0.2, "Centro"], [0.55, "Impacto"]],
+      focus: def + "2", focusZ: loc[2],
+      options: [
+        { label: "Penalti por mano", card: "w", grade: open ? "correct" : "wrong", fav: "atk", mag: 8, goal: true },
+        { label: "No es penalti: seguir", card: "g", grade: open ? "wrong" : "correct", fav: "def", mag: 15 }
+      ],
+      truth: open ? "Penalti por mano" : "No es penalti",
+      why: open ? "El 2 tenía el brazo separado del cuerpo cuando le dio el balón. Según la circular, es penalti."
+        : "El balón le dio en el brazo al 2, pero lo tenía pegado al cuerpo. Según la circular, no es penalti.",
+      ents: [
+        pl(atk, 7, [[0, W0.x - 12, W0.y], [0.2, W0.x, W0.y], [1, W0.x + 6, W0.y]]),
+        pl(atk, 9, [[0, P.x - 18, y9], [1, P.x - 6, y9 + R(-4, 4)]]),
+        pl(atk, 10, [[0, 236, 100 + R(-10, 10)], [1, 258, 100 + R(-10, 10)]]),
+        pl(def, 2, [[0, P.x + 0.5, P.y - 1], [0.55, P.x, P.y], [1, P.x + 0.5, P.y + 0.5]], { arms: open ? "open" : "tucked", face: [W0.x, W0.y] }),
+        pl(def, 4, [[0, 286, 100 - cs * 16], [1, 284, 100 - cs * 18]]),
+        pl(def, 5, [[0, 262, 100 + cs * 20], [1, 266, 100 + cs * 16]]),
+        gk(def, [[0, 298, 100], [0.4, 297, 100 + cs * 8], [1, 297, 100 + cs * 4]])
+      ],
+      ball: [[0, W0.x - 10, W0.y], [0.2, W0.x + 1, W0.y], [0.55, C.x, C.y], [1, C.x + u.x * 16 + v.x * sg * 8, C.y + u.y * 16 + v.y * sg * 8]],
+      ballZ: [[0, 0], [0.2, 0.5], [0.38, 15], [0.55, loc[2]], [0.75, 1.5], [0.85, 0]]
+    };
+  }
+
+  // Entrada en el medio campo: limpia, imprudente (amarilla) o con los tacos (roja).
+  function genTackle({ R, pick, chance, atk, def, name, say }) {
+    const sev = pick(["limpia", "amarilla", "roja"]), side = chance(0.5) ? 1 : -1;
+    const A0 = { x: R(100, 170), y: R(60, 140) }, Ac = { x: A0.x + 40, y: A0.y + 2 };
+    const clean = sev === "limpia";
+    const B = clean ? { x: Ac.x + 5, y: Ac.y } : { x: Ac.x + 2, y: Ac.y };
+    const Dc = clean ? { x: B.x, y: B.y + side * 6 } : { x: Ac.x, y: Ac.y + side * 6 };
+    const kick = clean ? { t0: 0.4, t1: 0.5, t2: 0.62, h: 0.4, target: "ball", studs: false }
+      : { t0: 0.4, t1: 0.5, t2: 0.62, h: sev === "roja" ? 2.6 : 0.7, target: atk + "10", studs: sev === "roja" };
+    return {
+      title: "Entrada en el medio campo",
+      pre: [["ASISTENTE", `El 10 del ${name(atk)} arranca. Le sale el 6 del ${name(def)}...`]],
+      post: [["GRADA", "¡¡FUERA, FUERA!!"],
+        ["ASISTENTE", say(sev === "roja" ? "¡Ha entrado con los tacos! Eso es roja." : sev === "amarilla" ? "Llega tarde. Para mí es amarilla." : "Ha ido al balón. Limpia.",
+          sev === "roja" ? "Entrada fuerte, pero amarilla." : sev === "amarilla" ? "Ha ido al balón. Limpia." : "Llega tarde. Para mí es amarilla.",
+          "Entrada fuerte del 6. No sé...")]],
+      varHint: ["SALA VAR", say(sev === "roja" ? "Revisa: posible roja directa." : "Nada grave para nosotros.",
+        sev === "roja" ? "Nada grave. Amarilla y seguimos." : "Revisa, puede ser roja.",
+        "Tú lo has visto más cerca.")],
+      events: [[0.5, "Entrada"]],
+      focus: atk + "10", focusZ: 2,
+      options: [
+        { label: "Seguir jugando", card: "g", grade: clean ? "correct" : "wrong", fav: "def", mag: 14 },
+        { label: "Falta y amarilla al 6", card: "y", grade: sev === "amarilla" ? "correct" : "wrong", fav: "atk", mag: 4 },
+        { label: "Falta y roja directa al 6", card: "r", grade: sev === "roja" ? "correct" : "wrong", fav: "atk", mag: 12 }
+      ],
+      truth: clean ? "Seguir jugando" : sev === "amarilla" ? "Falta y amarilla al 6" : "Roja directa al 6",
+      why: clean ? "El 6 fue al balón y lo tocó limpiamente. No hay falta."
+        : sev === "amarilla" ? "El 6 llegó tarde y le dio en el tobillo, sin tacos por delante: entrada imprudente, amarilla."
+          : "El 6 entró con los tacos por delante a la altura de la espinilla. Roja directa.",
+      ents: [
+        pl(atk, 10, [[0, A0.x, A0.y], [0.5, Ac.x, Ac.y], ...(clean ? [[0.7, Ac.x + 6, Ac.y], [1, Ac.x + 9, Ac.y]] : [[0.56, Ac.x + 4, Ac.y + 1], [1, Ac.x + 7, Ac.y + 2]])],
+          clean ? {} : { fall: 0.55 }),
+        pl(def, 6, [[0, Dc.x - 10, Dc.y + side * 26], [0.5, Dc.x, Dc.y], [0.6, Dc.x + 4, Dc.y - side * 2], [1, Dc.x + 6, Dc.y - side]], { kick }),
+        pl(atk, 8, [[0, A0.x - 10, A0.y - side * 40], [1, A0.x + 30, A0.y - side * 36]]),
+        pl(def, 8, [[0, A0.x + 70, A0.y - side * 14], [1, A0.x + 64, A0.y - side * 6]]),
+        pl(def, 4, [[0, A0.x + 116, 100], [1, A0.x + 108, 102]])
+      ],
+      ball: [[0, A0.x + 2, A0.y], [0.45, B.x - 2, B.y], [0.5, B.x, B.y], [1, ...(clean ? [B.x + 14, B.y - side * 20] : [Ac.x + 30, Ac.y - 2])]]
+    };
+  }
+
+  // Gol con jugada previa: empujón real o todo limpio.
+  function genBuildup({ R, chance, atk, def, name, say }) {
+    const push = chance(0.45);
+    const S = { x: R(185, 210), y: R(85, 115) }, gy = R(90, 110), high = chance(0.5);
+    const Dp = { x: R(248, 262), y: R(95, 125) };
+    return {
+      title: "Disparo desde fuera",
+      pre: [["ASISTENTE", `El 10 del ${name(atk)} se perfila para disparar...`]],
+      post: [["GRADA", atk === "N" ? "¡¡GOLAZO!!" : "Golazo del visitante... silencio."],
+        ["ASISTENTE", say(push ? "Ojo, antes del disparo el 5 se ha ido al suelo." : "Nada raro. Gol limpio.",
+          push ? "Nada raro. Gol limpio." : "Ojo, antes del disparo el 5 se ha ido al suelo.",
+          "¡Qué golazo!")]],
+      varHint: ["SALA VAR", say(push ? "Revisa: posible falta del 9 antes del disparo." : "Gol limpio, nada que revisar.",
+        push ? "Nada que revisar." : "Espera... revisa una posible falta previa del 9.",
+        "Si quieres revisar, es cosa tuya.")],
+      events: [[0.2, "Jugada previa"], [0.35, "Disparo"], [0.8, "Gol"]],
+      focus: atk + "9",
+      options: [
+        { label: "Gol válido", card: "g", grade: push ? "wrong" : "correct", fav: "atk", mag: 12, goal: true },
+        { label: "Anular por falta previa", card: "w", grade: push ? "correct" : "wrong", fav: "def", mag: 25 }
+      ],
+      truth: push ? "Anular por falta previa" : "Gol válido",
+      why: push ? "Antes del disparo, el 9 empujó por la espalda al 5 y lo tiró al suelo. Falta en la jugada: gol anulado."
+        : "Gol limpio. El 9 no llegó a tocar al 5.",
+      ents: [
+        pl(atk, 10, [[0, S.x - 4, S.y], [0.35, S.x + 20, S.y - 2], [1, S.x + 28, S.y - 3]]),
+        pl(atk, 9, push ? [[0, Dp.x + 10, Dp.y + 8], [0.2, Dp.x + 3, Dp.y], [1, Dp.x + 6, Dp.y - 6]] : [[0, Dp.x + 12, Dp.y + 10], [1, Dp.x + 4, Dp.y + 8]],
+          push ? { push: { t0: 0.14, t1: 0.22 } } : {}),
+        pl(atk, 7, [[0, 226, 60], [1, 250, 66]]),
+        pl(def, 5, [[0, Dp.x, Dp.y], [1, Dp.x + 1, Dp.y + 0.5]], push ? { fall: 0.24 } : {}),
+        pl(def, 4, [[0, 250, 80], [1, 256, 84]]),
+        pl(def, 2, [[0, 232, 140], [1, 240, 134]]),
+        gk(def, [[0, 298, 100], [0.6, 298, 100 + (gy - 100) * 0.2], [0.8, 297, gy + (gy < 100 ? 3 : -3)], [1, 296, gy]], { fall: 0.66, dive: true })
+      ],
+      ball: [[0, S.x - 2, S.y], [0.35, S.x + 23, S.y - 2], [0.8, 305, gy], [1, 309, gy]],
+      ballZ: [[0, 0], [0.35, 0], [0.6, high ? 9 : 3], [0.8, high ? 12.5 : 1.5], [1, high ? 5 : 0]]
+    };
+  }
 
   // ---------- Estado ----------
   const fresh = () => ({
-    screen: "menu", idx: 0, rep: 50, pressure: 20, varLeft: 3, extra: 0,
+    screen: "menu", mode: "quick", seed: 1, idx: 0, rep: 50, pressure: 20, varLeft: 3, extra: 0,
     score: { N: 0, S: 0 }, decisions: [], bribe: null, log: [],
     cur: { watched: false, varOpen: false, decided: null },
     ref: { apellido: "Szabó", nombre: "Gábor", ciudad: "Szeged" }
@@ -369,6 +633,16 @@
   }
   function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
   const fullName = r => `${r.apellido} ${r.nombre}`; // orden húngaro: apellido primero
+  const teamsOf = s => s.mode === "quick" ? makeTeams(s.seed) : { N: HOME[0], S: AWAY[0] };
+  function useMatch(s) { INCIDENTS = s.mode === "quick" ? generateMatch(s.seed) : PROLOGUE; return s; }
+  function startQuick() {
+    clearSave();
+    state = fresh();
+    state.seed = 1 + Math.floor(Math.random() * 2147483000);
+    useMatch(state);
+    state.screen = "incident";
+    startIncident();
+  }
 
   // Estado de la vista (no se guarda)
   const view = { t: 0, cam: "tribuna", zoom: false, line: false, anim: 0, bg: 0 };
@@ -381,6 +655,8 @@
     save();
     const hud = $("#hud");
     hud.hidden = !MATCH_SCREENS.includes(state.screen);
+    const tm = teamsOf(state);
+    $("#tN").textContent = tm.N[1]; $("#tS").textContent = tm.S[1];
     $("#sN").textContent = state.score.N;
     $("#sS").textContent = state.score.S;
     const inc = INCIDENTS[state.idx];
@@ -413,12 +689,16 @@
     </ul>`;
 
   function describeSave(s) {
+    if (s.mode === "quick") {
+      const tm = teamsOf(s), m = generateMatch(s.seed);
+      return `${tm.N[2]} – ${tm.S[2]} · ` + (s.screen === "report" ? "Informe del comité" : `Minuto ${m[s.idx].minute}`);
+    }
     if (s.screen === "ficha") return "Licencia sin firmar";
     if (s.screen === "coldopen") return "Antes de la final";
     if (s.screen === "half") return "Prólogo · Descanso";
     if (s.screen === "report") return "Prólogo · Informe del comité";
     if (s.screen === "epilogue") return "Fin del prólogo";
-    return `Prólogo · Minuto ${INCIDENTS[s.idx].minute}`;
+    return `Prólogo · Minuto ${PROLOGUE[s.idx].minute}`;
   }
 
   function renderMenu() {
@@ -427,12 +707,12 @@
       <section class="menu-screen">
         <canvas id="bg" width="320" height="180" aria-hidden="true"></canvas>
         <div class="menu-inner">
-          <p class="eyebrow">Hungría · 1994 — 2019</p>
+          <p class="eyebrow">Prototipo · Partido rápido</p>
           <h1 class="title">Referee,<br><span>Please</span></h1>
           <p class="tagline">Nadie llega a una final sin deber favores.</p>
           <nav class="menu" aria-label="Menú principal">
-            ${saved ? `<button class="mi" id="mContinue"><span>Continuar</span><small>${esc(fullName(saved.ref))} · ${esc(describeSave(saved))}</small></button>` : ""}
-            <button class="mi" id="mNew"><span>Nueva carrera</span></button>
+            ${saved ? `<button class="mi" id="mContinue"><span>Continuar</span><small>${esc(describeSave(saved))}</small></button>` : ""}
+            <button class="mi" id="mNew"><span>Partido rápido</span><small>5 jugadas al azar</small></button>
             <div class="confirm" id="mConfirm" hidden>
               <p>Se borrará la partida guardada.</p>
               <div class="row"><button class="btn sm" id="mYes">Empezar de nuevo</button><button class="btn sm" id="mNo">Cancelar</button></div>
@@ -440,11 +720,12 @@
             <button class="mi" id="mHow" aria-expanded="false"><span>Cómo se juega</span></button>
           </nav>
           <div class="how-panel" id="howPanel" hidden>${HOW}</div>
-          <p class="ver">Prototipo v0.2</p>
+          <p class="ver">Prototipo v0.3</p>
         </div>
       </section>`;
-    const begin = () => { clearSave(); state = fresh(); state.screen = "ficha"; render(); };
-    if (saved) $("#mContinue").onclick = () => { state = saved; render(); };
+    // La historia (licencia, prólogo y epílogo) queda aparcada mientras se pule el bucle de juego
+    const begin = startQuick;
+    if (saved) $("#mContinue").onclick = () => { state = useMatch(saved); render(); };
     $("#mNew").onclick = () => { if (saved) { $("#mConfirm").hidden = false; $("#mYes").focus(); } else begin(); };
     $("#mYes").onclick = begin;
     $("#mNo").onclick = () => { $("#mConfirm").hidden = true; $("#mNew").focus(); };
@@ -582,7 +863,7 @@
         <p class="lead">Veinticinco años de carrera te han traído hasta aquí, ${esc(r.nombre)}. No todos se pueden contar.</p>
         <button class="btn primary" id="go">Salir al campo</button>
       </section>`;
-    $("#go").onclick = () => { state.idx = 0; state.screen = "incident"; startIncident(); };
+    $("#go").onclick = () => { state.mode = "story"; useMatch(state); state.idx = 0; state.screen = "incident"; startIncident(); };
   }
 
   function renderEpilogue() {
@@ -611,13 +892,13 @@
 
   const RULES = `
     <details class="rules" id="rules">
-      <summary>Reglamento · Final de Copa</summary>
+      <summary>Reglamento del partido</summary>
       <ul>
         <li><b>Fuera de juego:</b> en el momento del pase, el atacante está en fuera si alguna parte de su cuerpo está más cerca de la portería que el penúltimo defensor (el portero cuenta).</li>
         <li><b>Entradas:</b> entrada imprudente = amarilla. Tacos por delante sobre el tobillo o la espinilla = roja directa.</li>
         <li><b>Simulación:</b> tirarse sin contacto = amarilla al que se tira.</li>
-        <li class="circ">Circular de la final: la mano solo es penalti si el brazo está separado del cuerpo.</li>
-        <li class="circ">Circular de la final: máximo 3 revisiones VAR por partido.</li>
+        <li class="circ">Circular: la mano solo es penalti si el brazo está separado del cuerpo.</li>
+        <li class="circ">Circular: máximo 3 revisiones VAR por partido.</li>
       </ul>
     </details>`;
 
@@ -794,7 +1075,7 @@
   }
 
   function nextStep() {
-    if (state.idx === HALF_AFTER && state.screen === "incident") { state.screen = "half"; render(); return; }
+    if (state.mode === "story" && state.idx === HALF_AFTER && state.screen === "incident") { state.screen = "half"; render(); return; }
     state.extra = 0;
     if (state.idx >= INCIDENTS.length - 1) { state.screen = "report"; render(); return; }
     state.idx++;
@@ -839,10 +1120,10 @@
     const count = g => rows.filter(r => r.grade === g).length;
     const nC = count("correct"), nP = count("partial"), nW = count("wrong");
     const kept = state.bribe === "keep";
-    const favoredDozsa = rows[3].grade !== "correct";
+    const favoredDozsa = rows[3] && rows[3].grade !== "correct";
     const fine = state.pressure >= 70 ? -30000 : 0;
     const lines = [
-      ["Honorarios de la final", 180000],
+      [state.mode === "quick" ? "Honorarios del partido" : "Honorarios de la final", 180000],
       [`Bonificación por aciertos (${nC} × ${ft(PAY.correct)})`, nC * PAY.correct],
       ...(nP ? [[`Decisiones aceptables (${nP} × ${ft(PAY.partial)})`, nP * PAY.partial]] : []),
       ...(nW ? [[`Multas por errores (${nW} × ${ft(PAY.wrong)})`, nW * PAY.wrong]] : []),
@@ -852,7 +1133,12 @@
     const total = lines.reduce((s, l) => s + l[1], 0);
 
     let stamp, cls, note;
-    if (kept && favoredDozsa) {
+    const quick = state.mode === "quick", tm = teamsOf(state);
+    if (quick) {
+      [stamp, cls, note] = nC >= 4 ? ["APROBADO", "ok", "Gran partido. El comité toma nota."]
+        : nC >= 2 ? ["APROBADO CON RESERVAS", "mid", "Actuación irregular. Hay que afinar el criterio."]
+          : ["SUSPENSO", "bad", "Demasiados errores. Te toca volver a ver vídeos."];
+    } else if (kept && favoredDozsa) {
       stamp = "EXPEDIENTE ABIERTO"; cls = "bad";
       note = "Una denuncia anónima señala la entrada del minuto 63. Mañana tu nombre sale en la prensa deportiva.";
     } else if (nC >= 4) {
@@ -875,7 +1161,7 @@
         <div class="stamp ${cls}">${stamp}</div>
         <div class="rep-head">
           <p class="eyebrow">Comité de Árbitros · Informe de actuación · Árbitro: ${esc(fullName(state.ref))}</p>
-          <h2>Final de Copa 2019 · Dunavölgy SE ${state.score.N} – ${state.score.S} Kőhegyi Dózsa</h2>
+          <h2>${quick ? "Partido rápido" : "Final de Copa 2019"} · ${esc(tm.N[0])} ${state.score.N} – ${state.score.S} ${esc(tm.S[0])}</h2>
         </div>
         <div class="tablewrap">
           <table>
@@ -900,9 +1186,13 @@
         </table>
         <p class="note"><b>Observaciones:</b> ${esc(note)}</p>
         <p class="note">Reputación final: <b>${state.rep}</b>/100 · Presión de grada final: <b>${state.pressure}</b>/100 · Revisiones VAR usadas: <b>${3 - state.varLeft}</b> de 3</p>
-        <button class="btn primary" id="again" style="color:#1a1305">Continuar →</button>
+        <div class="row">
+          <button class="btn primary" id="again" style="color:#1a1305">${quick ? "Otro partido" : "Continuar →"}</button>
+          ${quick ? `<button class="btn" id="toMenu" style="color:#1f1c16;background:transparent;border-color:#8a826e">Menú</button>` : ""}
+        </div>
       </section>`;
-    $("#again").onclick = () => { state.screen = "epilogue"; render(); };
+    $("#again").onclick = quick ? startQuick : () => { state.screen = "epilogue"; render(); };
+    if (quick) $("#toMenu").onclick = () => { clearSave(); state = fresh(); render(); };
   }
 
   // ---------- Dibujo ----------
@@ -935,7 +1225,7 @@
 
   // Segundo defensor más adelantado (el portero cuenta), medido por la parte del cuerpo más adelantada
   function offsideX(inc, t) {
-    const xs = inc.ents.filter(e => e.t === "S").map(e => at(e.k, t).x + 1).sort((a, b) => b - a);
+    const xs = inc.ents.filter(e => e.t === (inc.def || "S")).map(e => at(e.k, t).x + 1).sort((a, b) => b - a);
     return xs[1] ?? xs[0];
   }
 
@@ -1299,16 +1589,18 @@
     };
     let bend = running ? 0.6 : 0.2;
     if (e.arms === "tucked") { P.handL = [0.3, 0.98, 5.7]; P.handR = [0.3, -0.98, 5.7]; }
+    if (e.arms === "open") { P.handL = [0.2, 2.5, 7.6]; P.handR = [0.2, -2.5, 7.6]; }
+    if (e.push && t >= e.push.t0 && t <= e.push.t1 + 0.05) { P.handL = [2.2, 0.55, 7.9]; P.handR = [2.2, -0.55, 7.9]; P.neck = [0.9, 0, 8.5]; }
     if (e.kick) {
       const K = e.kick;
       const m = t < K.t0 ? 0 : t < K.t1 ? (t - K.t0) / (K.t1 - K.t0) : t < K.t2 ? 1 : clamp(1 - (t - K.t2) / 0.1, 0, 1);
       if (m > 0) {
-        const tp = at(inc.ents.find(x => x.id === K.target).k, Math.min(t, K.t1));
+        const tp = K.target === "ball" ? ballPos(inc, Math.min(t, K.t1)) : at(inc.ents.find(x => x.id === K.target).k, Math.min(t, K.t1));
         const dx = tp.x - p.x, dy = tp.y - p.y, a = dx * u.x + dy * u.y, b = dx * v.x + dy * v.y;
         P.footR = mix(P.footR, [a - 0.5, b * 0.9, K.h], m); P.footL = mix(P.footL, [-0.8, 0.5, 0], m);
         P.neck = mix(P.neck, [-1.1, 0, 8.2], m); P.head = mix(P.head, [-1.35, 0, 9.0], m); P.pelvis = mix(P.pelvis, [0, 0, 4.6], m);
         P.handL = mix(P.handL, [-0.6, 2.0, 7.0], m); P.handR = mix(P.handR, [-0.8, -1.8, 6.5], m);
-        P.studs = m > 0.6; bend *= 1 - m;
+        P.studs = m > 0.6 && K.studs !== false; bend *= 1 - m;
       }
     }
     if (e.slide !== undefined && t >= e.slide) {
@@ -1478,7 +1770,7 @@
 
   // ---------- Arranque (conserva la partida si la página se actualiza) ----------
   window.claude?.hot?.snapshot?.(() => ({ state }));
-  const start = data => { state = data && data.state && data.state.ref ? data.state : fresh(); render(); };
+  const start = data => { state = useMatch(data && data.state && data.state.ref ? data.state : fresh()); render(); };
   window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 })();
 </script>

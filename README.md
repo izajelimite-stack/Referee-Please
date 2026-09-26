@@ -5,5 +5,5 @@ Juego de arbitraje de fútbol inspirado en *Papers, Please*: ves cada jugada una
 qué pitar, puedes pedir el VAR (con límite) y al final el comité evalúa tu actuación.
 
 - **Diseño**: [`DISEÑO.md`](DISEÑO.md)
-- **Prototipo jugable**: [`prototipo/index.html`](prototipo/index.html). Descárgalo y ábrelo en
+- **Prototipo jugable** (partido rápido con jugadas al azar): [`prototipo/index.html`](prototipo/index.html). Descárgalo y ábrelo en
   cualquier navegador; no hace falta instalar nada.

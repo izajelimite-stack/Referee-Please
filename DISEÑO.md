@@ -108,7 +108,25 @@ Menú principal, licencia de árbitro (nombre y ciudad), y el prólogo: final de
 Circulares de la final: máximo 3 revisiones VAR; la mano solo es penalti con el brazo
 separado del cuerpo.
 
-## 10. Próximos pasos (ideas)
+## 10. Partido rápido (prototipo v0.3)
+Mientras se pule el bucle, la historia queda aparcada (el código de la licencia, el prólogo y
+el epílogo sigue en el archivo). El menú ofrece **Partido rápido**: 5 jugadas al azar, una de
+cada tipo, en orden y minutos aleatorios, con equipos inventados al azar.
+
+| Tipo | Variantes (cambian la decisión correcta) |
+|---|---|
+| Pase al hueco | Fuera de juego o habilitado, por 15 a 60 cm |
+| Entrada en el área | Penalti (se lleva las piernas) o piscinazo (toca balón, sin contacto) |
+| Centro al área | Brazo pegado (no es penalti) o separado (penalti) |
+| Entrada en el medio campo | Limpia, imprudente (amarilla) o con tacos (roja) |
+| Disparo desde fuera | Empujón previo del 9 (anular) o limpio (gol) |
+
+- Posiciones, lado del campo y equipo atacante al azar: si ataca el visitante, la grada
+  reacciona al revés.
+- El asistente y la sala VAR aciertan (~55 %), se equivocan (~25 %) o no se mojan (~20 %).
+- Cada partido sale de una semilla, así la partida guardada se reconstruye igual.
+
+## 11. Próximos pasos (ideas)
 - [ ] Primer partido de 1994 (sin VAR) en tercera división.
 - [ ] Consecuencias del sobre del prólogo a lo largo de la carrera.
 - [ ] Más tipos de jugada: agresiones fuera del balón, protestas, pérdidas de tiempo.
