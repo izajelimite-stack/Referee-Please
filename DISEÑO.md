@@ -30,7 +30,7 @@ mirar mejor, pero cuesta tiempo, paciencia de la grada y no siempre está de tu 
 | **Reputación** | Lo que piensa el comité de ti | Sube con aciertos, baja con errores |
 | **Presión de grada** | Lo harta que está la afición local | Sube si pitas contra el local y con cada revisión VAR |
 | **Revisiones VAR** | Veces que puedes pedir el VAR | Límite fijado por la circular de la jornada |
-| **Dinero** | Tu sueldo de árbitro | Base + bonus por acierto − multas (+ sobornos) |
+| **Dinero** | Tu sueldo de árbitro, en forintos | Base + bonus por acierto − multas (+ sobornos) |
 
 ## 5. El VAR
 - **Herramientas**: línea temporal frame a frame, cámara lenta, zoom, cámara lateral y
@@ -42,11 +42,36 @@ mirar mejor, pero cuesta tiempo, paciencia de la grada y no siempre está de tu 
 - **Coste**: cada revisión gasta una de las revisiones disponibles, añade minutos y sube la
   presión de la grada.
 
-## 6. Moralidad y narrativa
-- Sobornos (sobres en el vestuario), presiones de directivos, la prensa, tu familia...
-- Las decisiones morales no se juzgan al momento; aparecen en informes posteriores.
-- Idea de arco largo: empiezas en Tercera, puedes ascender hasta arbitrar una final... o
-  acabar en un escándalo de corrupción.
+## 6. Historia
+
+**Protagonista**: un árbitro húngaro (nombre elegido por el jugador; por defecto Szabó Gábor,
+con el apellido primero, como en Hungría). Nace en 1974.
+
+**Arco**: de la tercera división (NB III) en 1994 a la lista internacional y una final en 2019.
+No es un héroe: es parte del sistema. Sube porque sabe a quién deber favores, cuándo mirar
+hacia otro lado y cuándo no. El juego no premia ser bueno ni ser corrupto: cada camino tiene
+su precio.
+
+**Estructura**:
+- **Prólogo (2019)**: mayo, Budapest, final de Copa, la primera del país con VAR. Última
+  temporada del protagonista en la lista internacional. Es el partido jugable actual.
+- **"Veinticinco años antes..."**: agosto de 1994, su ciudad de origen, tercera división.
+  Un campo de tierra y 2.000 forintos por partido.
+- **La carrera**: de los 90 a hoy. La tecnología llega mientras asciendes:
+  - 90: solo tus ojos y los de tus asistentes. Nada de repeticiones.
+  - 2000: pinganillo y televisión: la repetición llega después, en la prensa.
+  - 2010: asistentes de área, apuestas online, amaños organizados.
+  - 2019: VAR.
+
+**Reglas del mundo**:
+- País, ciudades, ligas y época: **reales** (Hungría, NB I/II/III, forintos).
+- Clubes, directivos, periodistas y personajes: **inventados**. Nunca se nombra a clubes,
+  personas ni organismos reales implicados en corrupción.
+- Clubes del prólogo: **Dunavölgy SE** (local, celeste) y **Kőhegyi Dózsa** (visitante, coral;
+  un club de tradición policial con amigos en el ministerio).
+
+**Moralidad**: sobornos, favores, presiones políticas, la prensa, la familia. Las decisiones
+no se juzgan al momento: vuelven más tarde, en informes, titulares o personajes.
 
 ## 7. Estilo visual
 - **Prototipo**: pizarra táctica pixelada (círculos de colores sobre el campo).
@@ -58,23 +83,25 @@ mirar mejor, pero cuesta tiempo, paciencia de la grada y no siempre está de tu 
   Se abre en cualquier navegador, sin instalar nada.
 - **Más adelante**: cuando el diseño funcione, pasar a Godot 4.
 
-## 9. Prototipo v0.1 (hecho)
-Un partido: **Deportivo Norte – Atlético Sur**, Jornada 1.
+## 9. Prototipo (v0.2)
+Menú principal, licencia de árbitro (nombre y ciudad), y el prólogo: final de Copa 2019,
+**Dunavölgy SE – Kőhegyi Dózsa**. La partida se guarda sola y se puede continuar desde el menú.
 
 | Min. | Jugada | Decisión correcta | Trampa |
 |---|---|---|---|
 | 12' | Contra por el centro | Anular por fuera de juego | Fuera por muy poco, solo se ve con la línea |
 | 27' | Regate en el área | Amarilla por simulación | La sala VAR dice "penalti claro" |
 | 41' | Centro al área | No es penalti | Brazo pegado: la circular dice que no es mano |
-| Descanso | Sobre con 300 € | Entregarlo | Nadie te ve... |
+| Descanso | Sobre con 3 millones de forintos | Entregarlo (o no...) | Nadie te ve... |
 | 63' | Entrada en el medio campo | Roja directa | La sala VAR (pro-Sur) la minimiza |
 | 88' | Disparo desde fuera | Gol válido | La sala VAR te pide revisar sin motivo |
 
-Circulares de la Jornada 1: máximo 3 revisiones VAR; la mano solo es penalti con el brazo
+Circulares de la final: máximo 3 revisiones VAR; la mano solo es penalti con el brazo
 separado del cuerpo.
 
 ## 10. Próximos pasos (ideas)
-- [ ] Jornada 2 con circulares nuevas y consecuencias del sobre.
+- [ ] Primer partido de 1994 (sin VAR) en tercera división.
+- [ ] Consecuencias del sobre del prólogo a lo largo de la carrera.
 - [ ] Más tipos de jugada: agresiones fuera del balón, protestas, pérdidas de tiempo.
 - [ ] Tarjetas acumuladas a lo largo del partido (doble amarilla).
 - [ ] Sonido: silbato, grada, pinganillo.

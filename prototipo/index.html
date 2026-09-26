@@ -26,6 +26,7 @@
     --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { background: var(--booth); color: var(--ink); }
   body { font-family: var(--f-body); font-size: 16px; line-height: 1.45; }
   button { font: inherit; color: inherit; }
@@ -111,6 +112,44 @@
   details.rules ul { margin: 0; padding: 0 14px 12px 30px; display: grid; gap: 6px; font-size: 15px; }
   .circ { color: var(--amber); font-weight: 600; }
 
+  /* Menú principal */
+  .menu-screen { position: relative; overflow: hidden; border: 1px solid var(--line); background: var(--booth); min-height: min(620px, 86svh); display: grid; }
+  .menu-screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+  .menu-screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); }
+  .menu-inner { position: relative; z-index: 1; display: grid; gap: 14px; align-content: end; justify-items: start; padding: clamp(20px, 5vw, 48px); background: linear-gradient(90deg, rgba(15,20,24,.94) 0%, rgba(15,20,24,.72) 50%, rgba(15,20,24,.15) 100%); }
+  .tagline { font-family: var(--f-mono); font-size: 24px; line-height: 1.1; color: var(--muted); margin: 0 0 8px; }
+  .menu { display: grid; gap: 2px; }
+  .mi { display: grid; gap: 2px; text-align: left; cursor: pointer; background: transparent; border: 0; border-left: 3px solid transparent; padding: 8px 14px; color: var(--ink); font-family: var(--f-display); font-size: clamp(18px, 3vw, 24px); line-height: 1.1; }
+  .mi small { font-family: var(--f-body); font-size: 13px; color: var(--muted); letter-spacing: .02em; }
+  .mi:hover, .mi:focus-visible { border-left-color: var(--amber); color: var(--amber); background: rgba(240,180,60,.08); outline: none; }
+  .confirm { display: grid; gap: 6px; padding: 8px 14px 10px; border-left: 3px solid var(--bad); background: rgba(229,83,63,.08); }
+  .confirm p { margin: 0; font-size: 14px; }
+  .how-panel { max-width: 62ch; padding: 14px 16px; background: rgba(23,32,39,.92); border: 1px solid var(--line); }
+  .ver { margin: 6px 0 0; font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+
+  /* Licencia */
+  .paper { background: #e9e4d6; color: #1f1c16; padding: clamp(20px, 4vw, 36px); display: grid; gap: 20px; width: 100%; max-width: 640px; margin-inline: auto; }
+  .paper .eyebrow { color: #6d6555; }
+  .lic-head { display: grid; gap: 2px; border-bottom: 2px solid #1f1c16; padding-bottom: 12px; }
+  .lic-head h2 { font-family: var(--f-display); font-size: clamp(22px, 4.5vw, 32px); margin: 0; line-height: 1.05; }
+  .lic-body { display: flex; flex-wrap: wrap; gap: 20px; align-items: start; }
+  #portrait { width: 96px; height: 120px; image-rendering: pixelated; border: 2px solid #1f1c16; flex: none; }
+  .fields { flex: 1 1 260px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; align-items: baseline; }
+  .fields label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #4d473b; font-weight: 600; }
+  .fields label span { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; font-style: italic; color: #6d6555; }
+  .fields input, .fields select { font-family: var(--f-mono); font-size: 24px; line-height: 1; color: #1f1c16; background: transparent; border: 0; border-bottom: 1px dashed #6d6555; padding: 2px 4px; min-width: 0; width: 100%; }
+  .fields select { background: #e9e4d6; }
+  .fields .fixed { font-family: var(--f-mono); font-size: 24px; margin: 0; padding: 0 4px; }
+  @media (max-width: 480px) { .fields { grid-template-columns: minmax(0, 1fr); gap: 4px; } .fields input, .fields select, .fields .fixed { margin-bottom: 8px; } }
+  .career { display: grid; gap: 6px; }
+  .career ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .career li { display: flex; gap: 14px; align-items: center; }
+  .career b { font-family: var(--f-mono); font-size: 22px; font-weight: 400; width: 4ch; flex: none; }
+  .redact { display: inline-block; height: 14px; width: min(240px, 60%); background: #1f1c16; }
+
+  .card-open .match { font-family: var(--f-mono); font-size: 26px; line-height: 1.1; margin: 0; }
+  .card-open .match span { color: var(--muted); padding-inline: 6px; }
+
   /* Informe */
   .report { background: #e9e4d6; color: #1f1c16; padding: clamp(20px, 4vw, 40px); display: grid; gap: 18px; position: relative; overflow: hidden; }
   .report h2 { font-family: var(--f-display); font-size: clamp(20px, 4vw, 30px); margin: 0; line-height: 1.1; }
@@ -126,17 +165,18 @@
   .pay { max-width: 420px; }
   .pay td { border-bottom: 1px dashed #c9c1ad; }
   .pay tr.total td { border-bottom: 0; border-top: 2px solid #1f1c16; font-weight: 700; }
+  .rep-head { padding-right: 200px; }
   .stamp { position: absolute; top: 28px; right: 24px; transform: rotate(-9deg); font-family: var(--f-display); font-weight: 700; font-size: clamp(16px, 3vw, 26px); padding: 6px 12px; border: 4px solid currentColor; opacity: .85; text-align: center; line-height: 1.05; max-width: 45%; }
   .stamp.ok { color: #2f7a3a; } .stamp.mid { color: #b07800; } .stamp.bad { color: #b0271b; }
   .report .note { max-width: 62ch; margin: 0; }
-  @media (max-width: 560px) { .stamp { position: static; justify-self: start; transform: rotate(-4deg); max-width: none; } }
+  @media (max-width: 560px) { .rep-head { padding-right: 0; } .stamp { position: static; justify-self: start; transform: rotate(-4deg); max-width: none; } }
 
   @media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } }
 </style>
 
 <div id="app">
   <header class="hud" id="hud" hidden>
-    <div class="score"><span class="t n">NOR</span><b id="sN">0</b><span>–</span><b id="sS">0</b><span class="t s">SUR</span></div>
+    <div class="score"><span class="t n">DUN</span><b id="sN">0</b><span>–</span><b id="sS">0</b><span class="t s">DÓZ</span></div>
     <div class="clock" id="clock">0'</div>
     <div class="meters">
       <div class="meter"><label>Reputación <span id="repV"></span></label><div class="bar"><div class="fill" id="repF" style="background: var(--good)"></div></div></div>
@@ -175,17 +215,17 @@
   // Poses para la cámara lateral
   const run = (t, speed = 38) => { const a = 28 * Math.sin(t * speed); return { legF: a, legB: -a, lean: 8 }; };
 
-  // ---------- Las jugadas de la Jornada 1 ----------
+  // ---------- Prólogo: final de Copa, mayo de 2019 ----------
   const INCIDENTS = [
     {
       minute: 12, title: "Contra por el centro",
-      pre: [["ASISTENTE", "Atento: el Norte sale a la contra por el centro. El 8 levanta la cabeza..."]],
-      post: [["GRADA", "¡¡GOOOL!! ¡Gol del Norte!"], ["ASISTENTE", "No he visto bien la posición del 9. La decisión es tuya."]],
+      pre: [["ASISTENTE", "Atento: el Dunavölgy sale a la contra por el centro. El 8 levanta la cabeza..."]],
+      post: [["GRADA", "¡¡GOOOL!! ¡Gol del Dunavölgy!"], ["ASISTENTE", "No he visto bien la posición del 9. La decisión es tuya."]],
       varHint: ["SALA VAR", "Desde aquí no vemos nada claro. Si quieres revisar, es cosa tuya."],
       events: [[0.3, "Pase"], [0.8, "Disparo"], [1, "Gol"]],
       focus: "A9",
       options: [
-        { label: "Gol válido", card: "g", grade: "wrong", pressure: -10, goal: "N", crowd: "La grada del Norte celebra el 1-0." },
+        { label: "Gol válido", card: "g", grade: "wrong", pressure: -10, goal: "N", crowd: "La grada del Dunavölgy celebra el 1-0." },
         { label: "Anular: fuera de juego", card: "w", grade: "correct", pressure: 18, crowd: "Pitada monumental. Te llueven insultos desde el fondo." }
       ],
       truth: "Anular: fuera de juego",
@@ -239,17 +279,17 @@
     },
     {
       minute: 41, title: "Centro al área",
-      pre: [["ASISTENTE", "Centro desde la izquierda del Norte. El 9 ataca el primer palo..."]],
+      pre: [["ASISTENTE", "Centro desde la izquierda del Dunavölgy. El 9 ataca el primer palo..."]],
       post: [["GRADA", "¡¡MANO, MANO!!"], ["ASISTENTE", "Creo que le ha dado al central en el brazo."]],
       varHint: ["SALA VAR", "Posible mano del central. Te recomendamos revisar."],
       events: [[0.2, "Centro"], [0.55, "Impacto"]],
       focus: "D2",
       options: [
         { label: "Penalti por mano", card: "w", grade: "wrong", pressure: -8, goal: "N", crowd: "Euforia en la grada. El 9 transforma el penalti." },
-        { label: "No es penalti: seguir", card: "g", grade: "correct", pressure: 15, crowd: "Bronca enorme. El capitán del Norte te persigue protestando." }
+        { label: "No es penalti: seguir", card: "g", grade: "correct", pressure: 15, crowd: "Bronca enorme. El capitán del Dunavölgy te persigue protestando." }
       ],
       truth: "No es penalti",
-      why: "El balón dio en el brazo del central, pero lo tenía pegado al cuerpo. Según la circular de esta jornada, así no es penalti.",
+      why: "El balón dio en el brazo del central, pero lo tenía pegado al cuerpo. Según la circular de la final, así no es penalti.",
       ents: [
         { id: "A7", t: "N", k: [[0, 250, 22], [0.2, 262, 26], [1, 268, 30]] },
         { id: "A9", t: "N", k: [[0, 270, 70], [0.55, 278, 92], [1, 280, 98]] },
@@ -263,7 +303,7 @@
     },
     {
       minute: 63, title: "Entrada en el medio campo",
-      pre: [["ASISTENTE", "El 10 celeste arranca desde el medio campo. Le sale el 6 del Sur..."]],
+      pre: [["ASISTENTE", "El 10 celeste arranca desde el medio campo. Le sale el 6 del Dózsa..."]],
       post: [["GRADA", "¡¡FUERA, FUERA!!"], ["ASISTENTE", "Entrada fuerte del 6. Para mí es amarilla."]],
       varHint: ["SALA VAR", "Nosotros no vemos nada grave. Amarilla y seguimos."],
       events: [[0.5, "Entrada"]],
@@ -271,7 +311,7 @@
       options: [
         { label: "Seguir jugando", card: "g", grade: "wrong", pressure: 14, crowd: "La grada pide tu cabeza." },
         { label: "Falta y amarilla al 6", card: "y", grade: "wrong", pressure: 4, crowd: "Murmullos. Esperaban más." },
-        { label: "Falta y roja directa al 6", card: "r", grade: "correct", pressure: -12, crowd: "La grada del Norte aplaude. El banquillo del Sur explota." }
+        { label: "Falta y roja directa al 6", card: "r", grade: "correct", pressure: -12, crowd: "La grada del Dunavölgy aplaude. El banquillo del Dózsa explota." }
       ],
       truth: "Roja directa al 6",
       why: "El 6 entró con los tacos por delante a la altura del tobillo. Es roja directa, diga lo que diga la sala VAR.",
@@ -327,32 +367,39 @@
 
   // ---------- Estado ----------
   const fresh = () => ({
-    screen: "intro", idx: 0, rep: 50, pressure: 20, varLeft: 3, extra: 0,
+    screen: "menu", idx: 0, rep: 50, pressure: 20, varLeft: 3, extra: 0,
     score: { N: 0, S: 0 }, decisions: [], bribe: null, log: [],
-    cur: { watched: false, varOpen: false, decided: null }
+    cur: { watched: false, varOpen: false, decided: null },
+    ref: { apellido: "Szabó", nombre: "Gábor", ciudad: "Szeged" }
   });
   let state = fresh();
 
-  // Guardado automático en este navegador: si sales, vuelves donde estabas.
-  const SAVE_KEY = "referee-please-v01";
-  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {} }
+  // Guardado automático en este navegador. El menú no se guarda: desde él se continúa.
+  const SAVE_KEY = "referee-please-v02";
+  function save() {
+    if (state.screen === "menu") return;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
   function load() {
     try {
       const s = JSON.parse(localStorage.getItem(SAVE_KEY));
-      return s && s.screen && Array.isArray(s.log) ? s : null;
+      return s && s.screen && s.ref && Array.isArray(s.log) ? s : null;
     } catch (e) { return null; }
   }
+  function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+  const fullName = r => `${r.apellido} ${r.nombre}`; // orden húngaro: apellido primero
 
   // Estado de la vista (no se guarda)
-  const view = { t: 0, cam: "cenital", zoom: false, line: false, anim: 0 };
+  const view = { t: 0, cam: "cenital", zoom: false, line: false, anim: 0, bg: 0 };
 
   const $ = s => document.querySelector(s);
   const screen = $("#screen");
 
+  const MATCH_SCREENS = ["incident", "half", "report"];
   function renderHud() {
     save();
     const hud = $("#hud");
-    hud.hidden = state.screen === "intro";
+    hud.hidden = !MATCH_SCREENS.includes(state.screen);
     $("#sN").textContent = state.score.N;
     $("#sS").textContent = state.score.S;
     const inc = INCIDENTS[state.idx];
@@ -366,30 +413,210 @@
 
   function render() {
     cancelAnimationFrame(view.anim);
+    cancelAnimationFrame(view.bg);
     renderHud();
-    if (state.screen === "intro") renderIntro();
-    else if (state.screen === "incident") renderIncident();
-    else if (state.screen === "half") renderHalf();
-    else renderReport();
+    const r = { menu: renderMenu, ficha: renderFicha, coldopen: renderColdOpen, incident: renderIncident,
+      half: renderHalf, report: renderReport, epilogue: renderEpilogue }[state.screen] || renderMenu;
+    r();
+    window.scrollTo(0, 0);
   }
 
-  // ---------- Portada ----------
-  function renderIntro() {
+  // ---------- Menú principal ----------
+  const HOW = `
+    <ul class="how">
+      <li>Cada jugada la ves <b>una sola vez</b>, en directo. Mira bien.</li>
+      <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, zoom, cámara lateral y línea de fuera de juego. Tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
+      <li>La sala VAR, tu asistente y la grada opinan. <b>No siempre tienen razón.</b></li>
+      <li>Lee el <b>reglamento</b>: las circulares cambian las reglas.</li>
+      <li>No sabrás si acertaste hasta el <b>informe del comité</b>, al final del partido.</li>
+    </ul>`;
+
+  function describeSave(s) {
+    if (s.screen === "ficha") return "Licencia sin firmar";
+    if (s.screen === "coldopen") return "Antes de la final";
+    if (s.screen === "half") return "Prólogo · Descanso";
+    if (s.screen === "report") return "Prólogo · Informe del comité";
+    if (s.screen === "epilogue") return "Fin del prólogo";
+    return `Prólogo · Minuto ${INCIDENTS[s.idx].minute}`;
+  }
+
+  function renderMenu() {
+    const saved = load();
     screen.innerHTML = `
-      <section class="sheet">
-        <p class="eyebrow">Tercera División · Jornada 1 · Prototipo v0.1</p>
-        <h1 class="title">Referee,<br><span>Please</span></h1>
-        <p class="lead">Hoy arbitras <b style="color:var(--norte)">Deportivo Norte</b> contra <b style="color:var(--sur)">Atlético Sur</b>. El estadio es del Norte y el comité te está vigilando.</p>
-        <ul class="how">
-          <li>Cada jugada la ves <b>una sola vez</b>, en directo. Mira bien.</li>
-          <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, zoom, cámara lateral y línea de fuera de juego. Solo tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
-          <li>La sala VAR, tu asistente y la grada opinan. <b>No siempre tienen razón.</b></li>
-          <li>Lee el <b>reglamento de la jornada</b>: las circulares cambian las reglas.</li>
-          <li>No sabrás si acertaste hasta el <b>informe del comité</b>, al final del partido.</li>
-        </ul>
+      <section class="menu-screen">
+        <canvas id="bg" width="320" height="180" aria-hidden="true"></canvas>
+        <div class="menu-inner">
+          <p class="eyebrow">Hungría · 1994 — 2019</p>
+          <h1 class="title">Referee,<br><span>Please</span></h1>
+          <p class="tagline">Nadie llega a una final sin deber favores.</p>
+          <nav class="menu" aria-label="Menú principal">
+            ${saved ? `<button class="mi" id="mContinue"><span>Continuar</span><small>${esc(fullName(saved.ref))} · ${esc(describeSave(saved))}</small></button>` : ""}
+            <button class="mi" id="mNew"><span>Nueva carrera</span></button>
+            <div class="confirm" id="mConfirm" hidden>
+              <p>Se borrará la partida guardada.</p>
+              <div class="row"><button class="btn sm" id="mYes">Empezar de nuevo</button><button class="btn sm" id="mNo">Cancelar</button></div>
+            </div>
+            <button class="mi" id="mHow" aria-expanded="false"><span>Cómo se juega</span></button>
+          </nav>
+          <div class="how-panel" id="howPanel" hidden>${HOW}</div>
+          <p class="ver">Prototipo v0.2</p>
+        </div>
+      </section>`;
+    const begin = () => { clearSave(); state = fresh(); state.screen = "ficha"; render(); };
+    if (saved) $("#mContinue").onclick = () => { state = saved; render(); };
+    $("#mNew").onclick = () => { if (saved) { $("#mConfirm").hidden = false; $("#mYes").focus(); } else begin(); };
+    $("#mYes").onclick = begin;
+    $("#mNo").onclick = () => { $("#mConfirm").hidden = true; $("#mNew").focus(); };
+    $("#mHow").onclick = e => {
+      const p = $("#howPanel"); p.hidden = !p.hidden;
+      e.currentTarget.setAttribute("aria-expanded", String(!p.hidden));
+    };
+    stadium();
+  }
+
+  // Estadio nocturno pixelado detrás del menú
+  function stadium() {
+    const cv = $("#bg");
+    if (!cv) return;
+    const ctx = cv.getContext("2d"), w = 320, h = 180;
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const crowd = [];
+    for (let y = 58; y < 104; y += 4) for (let x = 0; x < w; x += 3) crowd.push([x + rnd() * 2, y + rnd() * 2, rnd()]);
+    const towers = [22, 108, 212, 298];
+    const frame = n => {
+      const g = ctx.createLinearGradient(0, 0, 0, 60);
+      g.addColorStop(0, "#070a0f"); g.addColorStop(1, "#141d28");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      // haces de luz
+      for (const x of towers) {
+        ctx.fillStyle = "rgba(255,236,190,.05)";
+        ctx.beginPath(); ctx.moveTo(x - 6, 20); ctx.lineTo(x + 6, 20); ctx.lineTo(x + 60, 150); ctx.lineTo(x - 60, 150); ctx.fill();
+      }
+      // grada
+      ctx.fillStyle = "#101820"; ctx.fillRect(0, 54, w, 52);
+      for (const [x, y, r] of crowd) {
+        const flash = !RM && ((r * 997 + n * 0.37) % 1) < 0.004;
+        ctx.fillStyle = flash ? "#ffffff" : r < 0.45 ? "#2c4a63" : r < 0.8 ? "#5a3a33" : "#39444f";
+        ctx.fillRect(x, y, flash ? 2 : 1, flash ? 2 : 1);
+      }
+      // torres de focos
+      for (const x of towers) {
+        ctx.fillStyle = "#1c2630"; ctx.fillRect(x - 1, 20, 2, 36);
+        ctx.fillStyle = "#fff4d6"; ctx.fillRect(x - 7, 14, 14, 6);
+        ctx.fillStyle = "rgba(255,244,214,.18)"; ctx.fillRect(x - 10, 11, 20, 12);
+      }
+      // vallas publicitarias
+      for (let x = 0; x < w; x += 32) { ctx.fillStyle = (x / 32) % 2 ? "#243b56" : "#8a6a24"; ctx.fillRect(x, 104, 32, 5); }
+      // césped
+      for (let i = 0; i < 16; i++) { ctx.fillStyle = i % 2 ? "#23502f" : "#275a35"; ctx.fillRect(i * 20, 109, 20, h - 109); }
+      ctx.fillStyle = "rgba(223,232,216,.7)";
+      ctx.fillRect(0, 140, w, 1); // línea de medio campo (en perspectiva)
+      ctx.strokeStyle = "rgba(223,232,216,.7)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(160, 140.5, 44, 12, 0, 0, 7); ctx.stroke();
+      // el árbitro, solo en el círculo central
+      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(157, 147, 8, 2);
+      ctx.fillStyle = "#0b0b0b"; ctx.fillRect(158, 136, 5, 7);
+      ctx.fillStyle = "#1a1a1a"; ctx.fillRect(158, 143, 2, 5); ctx.fillRect(161, 143, 2, 5);
+      ctx.fillStyle = "#e3c9a8"; ctx.fillRect(159, 132, 3, 4);
+      ctx.fillStyle = "#f0b43c"; ctx.fillRect(163, 138, 1, 1); // silbato
+    };
+    let n = 0, last = 0;
+    const loop = now => {
+      if (now - last > 120) { frame(n++); last = now; }
+      view.bg = requestAnimationFrame(loop);
+    };
+    frame(0);
+    if (!RM) view.bg = requestAnimationFrame(loop);
+  }
+
+  // ---------- Licencia de árbitro ----------
+  const CITIES = ["Szeged", "Debrecen", "Győr", "Pécs", "Miskolc", "Budapest"];
+  function renderFicha() {
+    const r = state.ref;
+    screen.innerHTML = `
+      <form class="paper licence" id="ficha" autocomplete="off">
+        <div class="lic-head">
+          <p class="eyebrow">Comité de Árbitros · Budapest</p>
+          <h2>Licencia de árbitro</h2>
+        </div>
+        <div class="lic-body">
+          <canvas id="portrait" width="24" height="30" aria-label="Foto de la licencia"></canvas>
+          <div class="fields">
+            <label for="fApe">Apellido <span>vezetéknév</span></label>
+            <input id="fApe" maxlength="18" required value="${esc(r.apellido)}">
+            <label for="fNom">Nombre <span>keresztnév</span></label>
+            <input id="fNom" maxlength="18" required value="${esc(r.nombre)}">
+            <label for="fCity">Ciudad de origen</label>
+            <select id="fCity">${CITIES.map(c => `<option ${c === r.ciudad ? "selected" : ""}>${c}</option>`).join("")}</select>
+            <label>Año de nacimiento</label>
+            <p class="fixed">1974</p>
+          </div>
+        </div>
+        <div class="career">
+          <p class="eyebrow">Categorías</p>
+          <ol>
+            <li><b>1994</b><span>NB III · Árbitro principal</span></li>
+            <li><b>199_</b><span class="redact"></span></li>
+            <li><b>200_</b><span class="redact"></span></li>
+            <li><b>201_</b><span class="redact"></span></li>
+            <li><b>2019</b><span>Lista internacional · Final de Copa</span></li>
+          </ol>
+        </div>
+        <button class="btn primary" type="submit">Firmar la licencia</button>
+      </form>`;
+    drawPortrait();
+    $("#ficha").onsubmit = e => {
+      e.preventDefault();
+      const ape = $("#fApe").value.trim(), nom = $("#fNom").value.trim();
+      if (!ape || !nom) return;
+      state.ref = { apellido: ape, nombre: nom, ciudad: $("#fCity").value };
+      state.screen = "coldopen";
+      render();
+    };
+  }
+
+  function drawPortrait() {
+    const cv = $("#portrait");
+    if (!cv) return;
+    const c = cv.getContext("2d");
+    c.fillStyle = "#b9b2a0"; c.fillRect(0, 0, 24, 30);
+    c.fillStyle = "#15151a"; c.fillRect(4, 22, 16, 8);       // camiseta negra
+    c.fillStyle = "#d8d2c2"; c.fillRect(10, 22, 4, 2);       // cuello
+    c.fillStyle = "#c9a888"; c.fillRect(8, 9, 8, 11); c.fillRect(10, 20, 4, 2);
+    c.fillStyle = "#3a2c22"; c.fillRect(7, 6, 10, 4); c.fillRect(7, 9, 1, 4); c.fillRect(16, 9, 1, 4);
+    c.fillStyle = "#1c1c1c"; c.fillRect(9, 13, 2, 1); c.fillRect(13, 13, 2, 1);
+    c.fillStyle = "#8e6e58"; c.fillRect(11, 17, 3, 1);
+  }
+
+  // ---------- Prólogo ----------
+  function renderColdOpen() {
+    const r = state.ref;
+    screen.innerHTML = `
+      <section class="sheet card-open">
+        <p class="eyebrow">Budapest · Mayo de 2019</p>
+        <h2 class="title" style="font-size:clamp(28px,6vw,52px)">Final de Copa</h2>
+        <p class="match"><b style="color:var(--norte)">Dunavölgy SE</b> <span>contra</span> <b style="color:var(--sur)">Kőhegyi Dózsa</b></p>
+        <p class="lead">Tienes 45 años. Es tu última temporada en la lista internacional y la primera final del país con VAR.</p>
+        <p class="lead">Veinticinco años de carrera te han traído hasta aquí, ${esc(r.nombre)}. No todos se pueden contar.</p>
         <button class="btn primary" id="go">Salir al campo</button>
       </section>`;
-    $("#go").onclick = () => { state = fresh(); state.screen = "incident"; startIncident(); };
+    $("#go").onclick = () => { state.idx = 0; state.screen = "incident"; startIncident(); };
+  }
+
+  function renderEpilogue() {
+    clearSave();
+    const r = state.ref;
+    screen.innerHTML = `
+      <section class="sheet card-open">
+        <p class="eyebrow">Veinticinco años antes</p>
+        <h2 class="title" style="font-size:clamp(28px,6vw,52px)">${esc(r.ciudad)}, agosto de 1994</h2>
+        <p class="lead">Un campo de tierra, una grada de madera y un sobre de 2.000 forintos como sueldo. Tercera división.</p>
+        <p class="lead">Esta es la historia de cómo ${esc(fullName(r))} llegó a esa final, y de todo lo que tuvo que tragar por el camino.</p>
+        <p class="hint">La carrera completa llegará en próximas versiones del prototipo.</p>
+        <button class="btn primary" id="toMenu">Volver al menú</button>
+      </section>`;
+    $("#toMenu").onclick = () => { state = fresh(); render(); };
   }
 
   // ---------- Jugada ----------
@@ -403,13 +630,13 @@
 
   const RULES = `
     <details class="rules" id="rules">
-      <summary>Reglamento · Jornada 1</summary>
+      <summary>Reglamento · Final de Copa</summary>
       <ul>
         <li><b>Fuera de juego:</b> en el momento del pase, el atacante está en fuera si alguna parte de su cuerpo está más cerca de la portería que el penúltimo defensor (el portero cuenta).</li>
         <li><b>Entradas:</b> entrada imprudente = amarilla. Tacos por delante sobre el tobillo o la espinilla = roja directa.</li>
         <li><b>Simulación:</b> tirarse sin contacto = amarilla al que se tira.</li>
-        <li class="circ">Circular J1: la mano solo es penalti si el brazo está separado del cuerpo.</li>
-        <li class="circ">Circular J1: máximo 3 revisiones VAR por partido.</li>
+        <li class="circ">Circular de la final: la mano solo es penalti si el brazo está separado del cuerpo.</li>
+        <li class="circ">Circular de la final: máximo 3 revisiones VAR por partido.</li>
       </ul>
     </details>`;
 
@@ -600,8 +827,8 @@
       <section class="sheet">
         <p class="eyebrow">Descanso · Vestuario arbitral</p>
         <h2 class="title" style="font-size:clamp(26px,5vw,44px)">Un sobre en la taquilla</h2>
-        <p class="lead">Encima de tu ropa hay un sobre que antes no estaba. Dentro hay <b>300 €</b> en billetes y una nota:</p>
-        <p class="lead" style="font-family:var(--f-mono);font-size:24px;color:var(--amber)">«Por un buen arbitraje en la segunda parte. Un amigo del Atlético Sur.»</p>
+        <p class="lead">Encima de tu ropa hay un sobre que antes no estaba. Dentro hay <b>3 millones de forintos</b> en billetes y una nota:</p>
+        <p class="lead" style="font-family:var(--f-mono);font-size:24px;color:var(--amber)">«Por un buen arbitraje en la segunda parte. Tus amigos de Kőhegy.»</p>
         ${b === null ? `
           <div class="row">
             <button class="btn" id="keep">Guardar el sobre en la mochila</button>
@@ -620,7 +847,8 @@
 
   // ---------- Informe ----------
   function renderReport() {
-    const PAY = { correct: 30, partial: 10, wrong: -40 };
+    const PAY = { correct: 40000, partial: 10000, wrong: -50000 };
+    const ft = v => Math.abs(v).toLocaleString("es-ES", { useGrouping: true }).replace(/,/g, ".") + " Ft";
     const rows = INCIDENTS.map((inc, i) => {
       const o = inc.options[state.decisions[i]];
       return { inc, o, grade: o.grade };
@@ -628,43 +856,43 @@
     const count = g => rows.filter(r => r.grade === g).length;
     const nC = count("correct"), nP = count("partial"), nW = count("wrong");
     const kept = state.bribe === "keep";
-    const favoredSur = rows[3].grade !== "correct";
-    const fine = state.pressure >= 70 ? -20 : 0;
+    const favoredDozsa = rows[3].grade !== "correct";
+    const fine = state.pressure >= 70 ? -30000 : 0;
     const lines = [
-      ["Sueldo base del partido", 120],
-      [`Bonificación por aciertos (${nC} × 30 €)`, nC * PAY.correct],
-      ...(nP ? [[`Decisiones aceptables (${nP} × 10 €)`, nP * PAY.partial]] : []),
-      ...(nW ? [[`Multas por errores (${nW} × 40 €)`, nW * PAY.wrong]] : []),
+      ["Honorarios de la final", 180000],
+      [`Bonificación por aciertos (${nC} × ${ft(PAY.correct)})`, nC * PAY.correct],
+      ...(nP ? [[`Decisiones aceptables (${nP} × ${ft(PAY.partial)})`, nP * PAY.partial]] : []),
+      ...(nW ? [[`Multas por errores (${nW} × ${ft(PAY.wrong)})`, nW * PAY.wrong]] : []),
       ...(fine ? [["Sanción por incidentes en la grada", fine]] : []),
-      ...(kept ? [["Sobre sin remitente", 300]] : [])
+      ...(kept ? [["Sobre sin remitente", 3000000]] : [])
     ];
     const total = lines.reduce((s, l) => s + l[1], 0);
 
     let stamp, cls, note;
-    if (kept && favoredSur) {
+    if (kept && favoredDozsa) {
       stamp = "EXPEDIENTE ABIERTO"; cls = "bad";
-      note = "El comité ha recibido una denuncia anónima sobre la entrada del minuto 63. Te llamarán a declarar antes de la Jornada 2.";
+      note = "Una denuncia anónima señala la entrada del minuto 63. Mañana tu nombre sale en la prensa deportiva.";
     } else if (nC >= 4) {
       stamp = "APROBADO"; cls = "ok";
-      note = "Buen partido. El comité toma nota para futuros ascensos.";
+      note = "Una final limpia. En la federación ya se habla de ti para el próximo torneo internacional.";
     } else if (nC >= 2) {
       stamp = "APROBADO CON RESERVAS"; cls = "mid";
-      note = "Actuación irregular. Se revisarán tus próximas designaciones.";
+      note = "La prensa critica tu arbitraje. Tu sitio en la lista internacional queda en el aire.";
     } else {
       stamp = "SUSPENSO"; cls = "bad";
-      note = "Demasiados errores. Te quedas sin designación la próxima jornada.";
+      note = "Te retiran de la lista internacional. No es así como querías terminar.";
     }
-    if (kept && !favoredSur) note += " Por cierto: alguien del Atlético Sur está muy enfadado contigo.";
-    if (state.bribe === "give") note += " El comité agradece que entregaras el sobre al delegado.";
+    if (kept && !favoredDozsa) note += " En Kőhegy alguien está muy enfadado contigo. Y sabe dónde vives.";
+    if (state.bribe === "give") note += " El comité agradece que entregaras el sobre. Hay quien dice que eso aquí no se hace.";
 
-    const sign = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + " €";
+    const sign = v => (v > 0 ? "+" : v < 0 ? "−" : "") + ft(v);
     const gradeTxt = { correct: "Correcta", partial: "Aceptable", wrong: "Error" };
     screen.innerHTML = `
       <section class="report">
         <div class="stamp ${cls}">${stamp}</div>
-        <div>
-          <p class="eyebrow">Comité Técnico de Árbitros · Informe de actuación</p>
-          <h2>Jornada 1 · Dep. Norte ${state.score.N} – ${state.score.S} At. Sur</h2>
+        <div class="rep-head">
+          <p class="eyebrow">Comité de Árbitros · Informe de actuación · Árbitro: ${esc(fullName(state.ref))}</p>
+          <h2>Final de Copa 2019 · Dunavölgy SE ${state.score.N} – ${state.score.S} Kőhegyi Dózsa</h2>
         </div>
         <div class="tablewrap">
           <table>
@@ -689,9 +917,9 @@
         </table>
         <p class="note"><b>Observaciones:</b> ${esc(note)}</p>
         <p class="note">Reputación final: <b>${state.rep}</b>/100 · Presión de grada final: <b>${state.pressure}</b>/100 · Revisiones VAR usadas: <b>${3 - state.varLeft}</b> de 3</p>
-        <button class="btn primary" id="again" style="color:#1a1305">Volver a arbitrar</button>
+        <button class="btn primary" id="again" style="color:#1a1305">Continuar →</button>
       </section>`;
-    $("#again").onclick = () => { state = fresh(); render(); };
+    $("#again").onclick = () => { state.screen = "epilogue"; render(); };
   }
 
   // ---------- Dibujo ----------
@@ -835,7 +1063,7 @@
 
   // ---------- Arranque (conserva la partida si la página se actualiza) ----------
   window.claude?.hot?.snapshot?.(() => ({ state }));
-  const start = data => { state = (data && data.state) || load() || state; render(); };
+  const start = data => { state = data && data.state && data.state.ref ? data.state : fresh(); render(); };
   window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 })();
 </script>
