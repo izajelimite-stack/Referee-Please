@@ -82,6 +82,8 @@ no se juzgan al momento: vuelven más tarde, en informes, titulares o personajes
 - **Prototipo**: sprites pixelados al estilo de los FIFA de los 90 (baja resolución, contorno
   oscuro, kits con camiseta, pantalón y medias) sobre un campo en
   perspectiva, más una vista cenital tipo pizarra.
+- **Luz de estadio nocturno**: cuatro torres de focos en las esquinas; cada jugador proyecta
+  cuatro sombras en cruz, tiene un lado iluminado y otro en sombra, y bruma con la distancia.
 - **Objetivo**: pixel art de baja resolución y paleta limitada, ambiente de cabina VAR
   (monitores, líneas de escaneo, tonos apagados con acentos ámbar).
 

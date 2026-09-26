@@ -190,7 +190,7 @@
 <script>
 (() => {
   "use strict";
-  const W = 320, H = 200, CW = 480, CH = 300, LIVE_MS = 3600;
+  const W = 320, H = 200, CW = 640, CH = 400, LIVE_MS = 3600;
   const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const COL = {
     pitch: "#2f6b3f", pitch2: "#2a613a", chalk: "#dfe8d8", norte: "#7cc4f0", sur: "#f07a5a",
@@ -988,6 +988,8 @@
   }
 
   // ----- 3D: cámaras de televisión y tu vista -----
+  // Estilo 16 bits: todo se dibuja a 320x200, píxel a píxel, y se amplía x2 sin suavizar.
+  const LW = 320, LH = 200;
   const V = {
     sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
     dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
@@ -1001,10 +1003,16 @@
   }
   const toCam = (c, p) => { const d = V.sub(p, c.pos); return [V.dot(d, c.right), V.dot(d, c.up), V.dot(d, c.fw)]; };
   const scr = (c, q) => [LW / 2 + c.f * q[0] / q[2], LH / 2 - c.f * q[1] / q[2]];
+  function proj(c, p) {
+    const q = toCam(c, p);
+    if (q[2] < NEAR) return null;
+    const [x, y] = scr(c, q);
+    return { x, y, s: c.f / q[2], d: q[2] };
+  }
+  const mkBuf = () => { const b = document.createElement("canvas"); b.width = LW; b.height = LH; return b; };
+  const LBUF = mkBuf(), SBUF = mkBuf();
 
-  // Estilo 16 bits: se dibuja a baja resolución, píxel a píxel, y se amplía sin suavizar
-  const LW = 240, LH = 150;
-  const LBUF = document.createElement("canvas"); LBUF.width = LW; LBUF.height = LH;
+  // --- Primitivas de píxel (sin antialias) ---
   function clipSeg(x0, y0, x1, y1) {
     let t0 = 0, t1 = 1;
     const dx = x1 - x0, dy = y1 - y0, P = [-dx, dx, -dy, dy], Qv = [x0 + 4, LW + 4 - x0, y0 + 4, LH + 4 - y0];
@@ -1023,7 +1031,7 @@
     g.fillStyle = col;
     const o = Math.floor((w - 1) / 2), dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
     let err = dx + dy;
-    for (let n = 0; n < 1000; n++) {
+    for (let n = 0; n < 1200; n++) {
       g.fillRect(x0 - o, y0 - o, w, w);
       if (x0 === x1 && y0 === y1) break;
       const e2 = 2 * err;
@@ -1036,6 +1044,45 @@
     for (let dy = -ry; dy <= ry; dy++) { const h = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy / (ry + 0.5)) ** 2))); g.fillRect(cx - h, cy + dy, 2 * h + 1, 1); }
   }
   const pxDisc = (g, cx, cy, r, col) => pxEllipse(g, cx, cy, r, r, col);
+  // Polígono convexo relleno por líneas de barrido
+  function pxPoly(g, pts, col) {
+    let y0 = Infinity, y1 = -Infinity;
+    for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+    y0 = Math.max(0, Math.floor(y0)); y1 = Math.min(LH - 1, Math.ceil(y1));
+    g.fillStyle = col;
+    for (let y = y0; y <= y1; y++) {
+      const yc = y + 0.5;
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        if ((a[1] <= yc && b[1] > yc) || (b[1] <= yc && a[1] > yc)) {
+          const x = a[0] + (yc - a[1]) / (b[1] - a[1]) * (b[0] - a[0]);
+          lo = Math.min(lo, x); hi = Math.max(hi, x);
+        }
+      }
+      if (lo <= hi) { const xa = Math.max(0, Math.round(lo)), xb = Math.min(LW, Math.round(hi)); if (xb > xa) g.fillRect(xa, y, xb - xa, 1); }
+    }
+  }
+  function poly3(g, c, pts, fill) {
+    const qs = pts.map(p => toCam(c, p)), out = [];
+    for (let i = 0; i < qs.length; i++) {
+      const a = qs[i], b = qs[(i + 1) % qs.length], ai = a[2] >= NEAR, bi = b[2] >= NEAR;
+      if (ai) out.push(a);
+      if (ai !== bi) { const u = (NEAR - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, NEAR]); }
+    }
+    if (out.length >= 3) pxPoly(g, out.map(q => scr(c, q)), fill);
+  }
+  function seg3(g, c, a, b, w, col) {
+    let qa = toCam(c, a), qb = toCam(c, b);
+    if (qa[2] < NEAR && qb[2] < NEAR) return;
+    if (qa[2] < NEAR || qb[2] < NEAR) {
+      const u = (NEAR - qa[2]) / (qb[2] - qa[2]);
+      const m = [qa[0] + (qb[0] - qa[0]) * u, qa[1] + (qb[1] - qa[1]) * u, NEAR];
+      if (qa[2] < NEAR) qa = m; else qb = m;
+    }
+    const [x1, y1] = scr(c, qa), [x2, y2] = scr(c, qb);
+    pxLine(g, x1, y1, x2, y2, w, col);
+  }
   const DIGITS = { 0: "111101101101111", 1: "010110010010111", 2: "111001111100111", 3: "111001111001111", 4: "101101111001001",
     5: "111100111001111", 6: "111100111101111", 7: "111001001001001", 8: "111101111101111", 9: "111101111001111" };
   function pxNumber(g, str, cx, y, col) {
@@ -1049,34 +1096,104 @@
       x += 4;
     }
   }
-  function proj(c, p) {
-    const q = toCam(c, p);
-    if (q[2] < NEAR) return null;
-    const [x, y] = scr(c, q);
-    return { x, y, s: c.f / q[2] };
+
+  // --- Color: sombreado y bruma de distancia ---
+  const HAZE = [30, 42, 52];
+  const hexRGB = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  function tone(h, k, fog) {
+    const c = hexRGB(h).map((v, i) => { const x = Math.min(255, v * k); return x + (HAZE[i] - x) * fog; });
+    return `rgb(${c.map(Math.round).join(",")})`;
   }
-  function poly3(ctx, c, pts, fill) {
-    const qs = pts.map(p => toCam(c, p)), out = [];
-    for (let i = 0; i < qs.length; i++) {
-      const a = qs[i], b = qs[(i + 1) % qs.length], ai = a[2] >= NEAR, bi = b[2] >= NEAR;
-      if (ai) out.push(a);
-      if (ai !== bi) { const u = (NEAR - a[2]) / (b[2] - a[2]); out.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, NEAR]); }
-    }
-    if (out.length < 3) return;
-    ctx.fillStyle = fill; ctx.beginPath();
-    out.forEach((q, i) => { const [x, y] = scr(c, q); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-    ctx.closePath(); ctx.fill();
+
+  // --- Estadio ---
+  const TOWERS = [[-330, -40, 150], [350, -40, 150], [-330, 240, 150], [350, 240, 150]];
+  function seeded(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+  const patterns = {};
+  function pattern(g, key, size, paint) {
+    if (!patterns[key]) { const cv = document.createElement("canvas"); cv.width = cv.height = size; paint(cv.getContext("2d")); patterns[key] = g.createPattern(cv, "repeat"); }
+    return patterns[key];
   }
-  function seg3(ctx, c, a, b) {
-    let qa = toCam(c, a), qb = toCam(c, b);
-    if (qa[2] < NEAR && qb[2] < NEAR) return;
-    if (qa[2] < NEAR || qb[2] < NEAR) {
-      const u = (NEAR - qa[2]) / (qb[2] - qa[2]);
-      const m = [qa[0] + (qb[0] - qa[0]) * u, qa[1] + (qb[1] - qa[1]) * u, NEAR];
-      if (qa[2] < NEAR) qa = m; else qb = m;
+  const crowdPat = g => pattern(g, "crowd", 32, x => {
+    x.fillStyle = "#10161d"; x.fillRect(0, 0, 32, 32);
+    const r = seeded(9), cols = ["#2a3f52", "#3b5268", "#7cc4f0", "#5aa0cc", "#6a3f33", "#8a5a44", "#c9c2b4", "#1e2833"];
+    for (let y = 0; y < 32; y += 2) for (let xx = (y / 2) % 2; xx < 32; xx += 2) { x.fillStyle = cols[(r() * cols.length) | 0]; x.fillRect(xx, y, 1, 1); }
+  });
+  const grassPat = g => pattern(g, "grass", 8, x => {
+    const r = seeded(3);
+    for (let y = 0; y < 8; y++) for (let xx = 0; xx < 8; xx++) { if (r() < 0.22) { x.fillStyle = r() < 0.5 ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.07)"; x.fillRect(xx, y, 1, 1); } }
+  });
+
+  function drawStadium(g, c) {
+    // cielo nocturno
+    const sky = g.createLinearGradient(0, 0, 0, LH);
+    sky.addColorStop(0, "#05080c"); sky.addColorStop(1, "#141d27");
+    g.fillStyle = sky; g.fillRect(0, 0, LW, LH);
+    // césped (campo completo, con la otra mitad) y franjas de corte
+    poly3(g, c, [[-312, -12, 0], [332, -12, 0], [332, 212, 0], [-312, 212, 0]], "#2d6a3c");
+    for (let x = -312, i = 0; x < 332; x += 21.5, i++) if (i % 2) poly3(g, c, [[x, -12, 0], [x + 21.5, -12, 0], [x + 21.5, 212, 0], [x, 212, 0]], "#367a46");
+    poly3(g, c, [[-312, -12, 0], [332, -12, 0], [332, 212, 0], [-312, 212, 0]], grassPat(g));
+    // gradas en los lados que la cámara tiene delante (las de detrás no se ven)
+    const sides = [];
+    const P = { N: (a, o, z) => [a, -12 - o, z], S: (a, o, z) => [a, 212 + o, z], W: (a, o, z) => [-312 - o, a, z], E: (a, o, z) => [332 + o, a, z] };
+    if (c.pos[1] > -12) sides.push(["N", -400, 420, [10, -60]]);
+    if (c.pos[1] < 212) sides.push(["S", -400, 420, [10, 260]]);
+    if (c.pos[0] > -312) sides.push(["W", -100, 300, [-360, 100]]);
+    if (c.pos[0] < 332) sides.push(["E", -100, 300, [380, 100]]);
+    sides.sort((a, b) => Math.hypot(b[3][0] - c.pos[0], b[3][1] - c.pos[1]) - Math.hypot(a[3][0] - c.pos[0], a[3][1] - c.pos[1]));
+    const crowd = crowdPat(g);
+    for (const [k, a0, a1] of sides) {
+      const f = P[k], step = (a1 - a0) / 8;
+      for (let i = 0; i < 8; i++) {
+        const a = a0 + i * step, b = a + step;
+        poly3(g, c, [f(a, 0, 0), f(b, 0, 0), f(b, 0, 5), f(a, 0, 5)], "#1b232c");              // muro
+        poly3(g, c, [f(a, 1, 5), f(b, 1, 5), f(b, 66, 44), f(a, 66, 44)], crowd);                // grada
+        poly3(g, c, [f(a, 66, 44), f(b, 66, 44), f(b, 66, 58), f(a, 66, 58)], "#0b1016");        // fondo
+        poly3(g, c, [f(a, 26, 58), f(b, 26, 58), f(b, 76, 64), f(a, 76, 64)], "#1a212a");        // techo
+        poly3(g, c, [f(a, 26, 55), f(b, 26, 55), f(b, 26, 58), f(a, 26, 58)], "#2c3642");        // borde del techo
+      }
+      for (let i = 0; i < 20; i++) {
+        const a = a0 + i * (a1 - a0) / 20, b = a + (a1 - a0) / 20;
+        poly3(g, c, [f(a, -3, 0), f(b, -3, 0), f(b, -3, 3.4), f(a, -3, 3.4)], i % 2 ? "#1f4e8c" : "#d8a21c"); // vallas
+      }
     }
-    const [x1, y1] = scr(c, qa), [x2, y2] = scr(c, qb);
-    pxLine(ctx, x1, y1, x2, y2, Math.max(1, Math.round(ctx.lineWidth)), ctx.strokeStyle);
+    // torres de focos
+    for (const T of TOWERS) {
+      seg3(g, c, [T[0], T[1], 0], T, 1, "#1d252e");
+      const q = proj(c, T);
+      if (!q) continue;
+      g.globalCompositeOperation = "lighter";
+      pxDisc(g, q.x, q.y, 9, "rgba(255,236,190,.05)");
+      pxDisc(g, q.x, q.y, 5, "rgba(255,236,190,.10)");
+      g.globalCompositeOperation = "source-over";
+      g.fillStyle = "#fff6dc"; g.fillRect(Math.round(q.x) - 2, Math.round(q.y) - 1, 5, 2);
+    }
+  }
+
+  function drawMarkings(g, c, inc, t, line) {
+    const COLL = "#e6eee2";
+    const L = pts => { for (let i = 0; i < pts.length - 1; i++) seg3(g, c, [pts[i][0], pts[i][1], 0.05], [pts[i + 1][0], pts[i + 1][1], 0.05], 1, COLL); };
+    const both = pts => { L(pts); L(pts.map(([x, y]) => [20 - x, y])); }; // la otra mitad es simétrica respecto a x=10
+    L([[-284, 6], [304, 6], [304, 194], [-284, 194], [-284, 6]]);
+    L([[10, 6], [10, 194]]);
+    both([[304, 46], [256, 46], [256, 154], [304, 154]]);
+    both([[304, 74], [290, 74], [290, 126], [304, 126]]);
+    const a0 = Math.acos(-16 / 24), arc = [], cc = [];
+    for (let i = 0; i <= 12; i++) { const a = a0 + (2 * Math.PI - 2 * a0) * i / 12; arc.push([272 + 24 * Math.cos(a), 100 + 24 * Math.sin(a)]); }
+    for (let i = 0; i <= 32; i++) { const a = 2 * Math.PI * i / 32; cc.push([10 + 22 * Math.cos(a), 100 + 22 * Math.sin(a)]); }
+    both(arc); L(cc); both([[271.5, 100], [272.5, 100]]);
+    if (line) seg3(g, c, [offsideX(inc, t), 6, 0.1], [offsideX(inc, t), 194, 0.1], 1, COL.amber);
+  }
+
+  function drawGoal3(g, c, m) {
+    const X = x => m ? 20 - x : x; // m: la portería del otro lado
+    const NET = "rgba(235,240,235,.32)";
+    for (let y = 90; y <= 110; y += 2.5) { seg3(g, c, [X(304), y, 14], [X(311), y, 11], 1, NET); seg3(g, c, [X(311), y, 0], [X(311), y, 11], 1, NET); }
+    for (let z = 0; z <= 11; z += 2.2) seg3(g, c, [X(311), 90, z], [X(311), 110, z], 1, NET);
+    for (const y of [90, 110]) for (let x = 304; x <= 311; x += 2.3) seg3(g, c, [X(x), y, 0], [X(x), y, 14 - (x - 304) * 3 / 7], 1, NET);
+    const q = proj(c, [X(304), 100, 7]), w = q ? Math.max(1, Math.round(0.3 * q.s)) : 1;
+    for (const [a, b] of [[[304, 90, 0], [304, 90, 14]], [[304, 110, 0], [304, 110, 14]], [[304, 90, 14], [304, 110, 14]]]) {
+      seg3(g, c, [X(a[0]), a[1], a[2]], [X(b[0]), b[1], b[2]], w, "#f4f4f0");
+    }
   }
 
   function cameraFor(kind, inc, t, zoom) {
@@ -1091,83 +1208,36 @@
     else if (kind === "porteria") { pos = [352, 100 + (fe.y - 100) * 0.4, 28]; tgt = [fe.x, fe.y, 4]; f = 520; }
     else { pos = [fe.x, -100, 85]; tgt = [fe.x, fe.y, 2]; f = 600; }
     if (zoom) { f *= 3.5; tgt = [fe.x, fe.y, inc.focusZ ?? 4]; }
-    return makeCam(pos, tgt, f * LW / CW);
-  }
-
-  let CROWD_IMG = null;
-  function crowdImg() {
-    if (CROWD_IMG) return CROWD_IMG;
-    const cv = document.createElement("canvas"); cv.width = LW; cv.height = LH;
-    const g = cv.getContext("2d");
-    g.fillStyle = "#121a23"; g.fillRect(0, 0, LW, LH);
-    let s = 5;
-    const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const cols = ["#2c4a63", "#3a566e", "#7cc4f0", "#5a3a33", "#6b4a3a", "#39444f", "#7a8a96"];
-    for (let y = 0; y < LH; y += 2) for (let x = (y / 2) % 2; x < LW; x += 2) { g.fillStyle = cols[(r() * cols.length) | 0]; g.fillRect(x, y, 1, 1); }
-    return (CROWD_IMG = cv);
+    return makeCam(pos, tgt, f * LW / 480);
   }
 
   function draw3D(ctx, inc, t, kind, zoom, line, labels) {
     const g = LBUF.getContext("2d");
     const c = cameraFor(kind, inc, t, zoom);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.drawImage(crowdImg(), 0, 0);
-    // césped
-    poly3(g, c, [[-80, -60, 0], [400, -60, 0], [400, 260, 0], [-80, 260, 0]], "#2f6b3f");
-    for (let i = 1; i < 24; i += 2) { const x = -80 + i * 20; poly3(g, c, [[x, -60, 0], [x + 20, -60, 0], [x + 20, 260, 0], [x, 260, 0]], "#3a7a48"); }
-    // vallas publicitarias en el lado lejano
-    const by = c.pos[1] > 100 ? -6 : 206;
-    for (let x = -80, i = 0; x < 400; x += 32, i++) poly3(g, c, [[x, by, 0], [x + 32, by, 0], [x + 32, by, 4], [x, by, 4]], i % 2 ? "#1f4e8c" : "#d8a21c");
-    // líneas
-    g.strokeStyle = "#e8efe4"; g.lineWidth = 1;
-    const L = pts => { for (let i = 0; i < pts.length - 1; i++) seg3(g, c, [pts[i][0], pts[i][1], 0.05], [pts[i + 1][0], pts[i + 1][1], 0.05]); };
-    L([[10, 6], [304, 6], [304, 194], [10, 194], [10, 6]]);
-    L([[304, 46], [256, 46], [256, 154], [304, 154]]);
-    L([[304, 74], [290, 74], [290, 126], [304, 126]]);
-    const a0 = Math.acos(-16 / 24), arc = [], cc = [];
-    for (let i = 0; i <= 12; i++) { const a = a0 + (2 * Math.PI - 2 * a0) * i / 12; arc.push([272 + 24 * Math.cos(a), 100 + 24 * Math.sin(a)]); }
-    for (let i = 0; i <= 16; i++) { const a = -Math.PI / 2 + Math.PI * i / 16; cc.push([10 + 22 * Math.cos(a), 100 + 22 * Math.sin(a)]); }
-    L(arc); L(cc); L([[271.5, 100], [272.5, 100]]);
-    if (line) {
-      const lx = offsideX(inc, t);
-      g.strokeStyle = COL.amber; g.lineWidth = 1;
-      seg3(g, c, [lx, 6, 0.1], [lx, 194, 0.1]);
-    }
-    // sombras
-    const SH = "#1f4a2a";
-    for (const e of inc.ents) {
-      const p = at(e.k, t), q = proj(c, [p.x, p.y, 0]);
-      if (q) pxEllipse(g, q.x, q.y, Math.max(1, Math.round(1.6 * q.s)), Math.max(0, Math.round(0.45 * q.s)), SH);
-    }
-    const b = ballPos(inc, t), bq = proj(c, [b.x, b.y, 0]);
-    if (bq) pxEllipse(g, bq.x, bq.y, Math.max(1, Math.round(0.6 * bq.s)), 0, SH);
-    // jugadores, balón y portería, del más lejano al más cercano
+    g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+    drawStadium(g, c);
+    drawMarkings(g, c, inc, t, line);
+    const bodies = inc.ents.map(e => bodyWorld(e, inc, t));
+    const b = ballPos(inc, t);
+    drawShadows(g, c, bodies, b);
+    // jugadores, balón y porterías, del más lejano al más cercano
     const depth = p => V.dot(V.sub(p, c.pos), c.fw);
-    const objs = inc.ents.map(e => { const p = at(e.k, t); return { d: depth([p.x, p.y, 4]), fn: () => drawPlayer3(g, c, e, inc, t, labels) }; });
+    const objs = bodies.map(B => ({ d: depth([B.p.x, B.p.y, 4]), fn: () => drawPlayer3(g, c, B, labels) }));
     objs.push({ d: depth([b.x, b.y, b.z]), fn: () => drawBall3(g, c, b) });
-    objs.push({ d: depth([307, 100, 7]), fn: () => drawGoal3(g, c) });
+    objs.push({ d: depth([307, 100, 7]), fn: () => drawGoal3(g, c, false) });
+    objs.push({ d: depth([-287, 100, 7]), fn: () => drawGoal3(g, c, true) });
     objs.sort((p, q) => q.d - p.d).forEach(o => o.fn());
+    // atmósfera: bruma de focos arriba y viñeta
+    const hz = g.createLinearGradient(0, 0, 0, LH);
+    hz.addColorStop(0, "rgba(40,52,62,.28)"); hz.addColorStop(0.5, "rgba(40,52,62,.06)"); hz.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = hz; g.fillRect(0, 0, LW, LH);
+    const vg = g.createRadialGradient(LW / 2, LH / 2, LH * 0.45, LW / 2, LH / 2, LW * 0.72);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
+    g.fillStyle = vg; g.fillRect(0, 0, LW, LH);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(LBUF, 0, 0, CW, CH);
-  }
-
-  function drawGoal3(ctx, c) {
-    ctx.strokeStyle = "rgba(235,240,235,.3)"; ctx.lineWidth = 1;
-    for (let y = 90; y <= 110; y += 2.5) { seg3(ctx, c, [304, y, 14], [311, y, 11]); seg3(ctx, c, [311, y, 0], [311, y, 11]); }
-    for (let z = 0; z <= 11; z += 2.2) seg3(ctx, c, [311, 90, z], [311, 110, z]);
-    for (const y of [90, 110]) for (let x = 304; x <= 311; x += 2.3) seg3(ctx, c, [x, y, 0], [x, y, 14 - (x - 304) * 3 / 7]);
-    const q = proj(c, [304, 100, 7]);
-    ctx.strokeStyle = "#f4f4f0"; ctx.lineWidth = q ? Math.max(1, 0.3 * q.s) : 1;
-    seg3(ctx, c, [304, 90, 0], [304, 90, 14]); seg3(ctx, c, [304, 110, 0], [304, 110, 14]); seg3(ctx, c, [304, 90, 14], [304, 110, 14]);
-  }
-
-  function drawBall3(g, c, b) {
-    const q = proj(c, [b.x, b.y, b.z + 0.65]);
-    if (!q) return;
-    const r = Math.max(1, Math.round(0.65 * q.s));
-    pxDisc(g, q.x, q.y, r + 1, "#0b0f0c");
-    pxDisc(g, q.x, q.y, r, "#ffffff");
   }
 
   function vel(k, t) {
@@ -1185,46 +1255,53 @@
     return { u: { x: dx / d, y: dy / d }, sp: 0 };
   }
 
-  // Puntos del cuerpo en coordenadas locales: [adelante, lado, altura]
+  // Esqueleto en coordenadas locales [adelante, lado, altura]. Altura total ≈ 10 (1,80 m).
   function bodyLocal(e, inc, t, sp, p, u, v) {
-    const running = sp > 12, sw = running ? Math.sin(t * 44 + e.id.charCodeAt(1)) : 0;
-    const lean = running ? 0.6 : 0.1;
-    const P = {
-      hip: [0, 0, 5.2], neck: [lean, 0, 8.6], head: [lean + 0.15, 0, 9.75],
-      footL: [sw * 2, 0.7, running ? Math.max(0, sw) * 0.9 : 0], footR: [-sw * 2, -0.7, running ? Math.max(0, -sw) * 0.9 : 0],
-      handL: [-sw * 1.3 + 0.1, 1.45, 5.9], handR: [sw * 1.3 + 0.1, -1.45, 5.9], studs: false
-    };
+    const running = sp > 12, ph = t * 44 + e.id.charCodeAt(1), sw = running ? Math.sin(ph) : 0, lift = running ? Math.cos(ph) : 0;
+    const lean = running ? 0.55 : 0.08;
     const mix = (A, B, m) => A.map((x, i) => x + (B[i] - x) * m);
-    if (e.arms === "tucked") { P.handL = [0.35, 1.05, 5.9]; P.handR = [0.35, -1.05, 5.9]; }
+    const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    const P = {
+      pelvis: [0, 0, 5.0], neck: [lean, 0, 8.6], head: [lean + 0.12, 0, 9.4],
+      footL: [sw * 1.9, 0.42, running ? Math.max(0, lift) * 0.9 : 0], footR: [-sw * 1.9, -0.42, running ? Math.max(0, -lift) * 0.9 : 0],
+      handL: [-sw * 1.2 + 0.15, 1.2, 5.4], handR: [sw * 1.2 + 0.15, -1.2, 5.4], studs: false
+    };
+    let bend = running ? 0.6 : 0.2;
+    if (e.arms === "tucked") { P.handL = [0.3, 0.98, 5.7]; P.handR = [0.3, -0.98, 5.7]; }
     if (e.kick) {
       const K = e.kick;
       const m = t < K.t0 ? 0 : t < K.t1 ? (t - K.t0) / (K.t1 - K.t0) : t < K.t2 ? 1 : clamp(1 - (t - K.t2) / 0.1, 0, 1);
       if (m > 0) {
         const tp = at(inc.ents.find(x => x.id === K.target).k, Math.min(t, K.t1));
         const dx = tp.x - p.x, dy = tp.y - p.y, a = dx * u.x + dy * u.y, b = dx * v.x + dy * v.y;
-        P.footR = mix(P.footR, [a - 0.5, b * 0.9, K.h], m); P.footL = mix(P.footL, [-0.8, 0.7, 0], m);
-        P.neck = mix(P.neck, [-1.1, 0, 8.2], m); P.head = mix(P.head, [-1.4, 0, 9.3], m); P.hip = mix(P.hip, [0, 0, 4.6], m);
-        P.studs = m > 0.6;
+        P.footR = mix(P.footR, [a - 0.5, b * 0.9, K.h], m); P.footL = mix(P.footL, [-0.8, 0.5, 0], m);
+        P.neck = mix(P.neck, [-1.1, 0, 8.2], m); P.head = mix(P.head, [-1.35, 0, 9.0], m); P.pelvis = mix(P.pelvis, [0, 0, 4.6], m);
+        P.handL = mix(P.handL, [-0.6, 2.0, 7.0], m); P.handR = mix(P.handR, [-0.8, -1.8, 6.5], m);
+        P.studs = m > 0.6; bend *= 1 - m;
       }
     }
     if (e.slide !== undefined && t >= e.slide) {
       const m = clamp((t - e.slide) / 0.08, 0, 1);
-      P.hip = mix(P.hip, [-1, 0, 1.2], m); P.neck = mix(P.neck, [-3.4, 0, 3.2], m); P.head = mix(P.head, [-4.2, 0, 3.9], m);
-      P.footR = mix(P.footR, [3.6, -0.3, 0.35], m); P.footL = mix(P.footL, [0.8, 0.9, 0.25], m);
-      P.handL = mix(P.handL, [-2.6, 1.6, 0.3], m); P.handR = mix(P.handR, [-2.6, -1.6, 0.3], m);
+      P.pelvis = mix(P.pelvis, [-1, 0, 1.1], m); P.neck = mix(P.neck, [-3.4, 0, 3.0], m); P.head = mix(P.head, [-4.0, 0, 3.6], m);
+      P.footR = mix(P.footR, [3.6, -0.3, 0.35], m); P.footL = mix(P.footL, [0.8, 0.6, 0.25], m);
+      P.handL = mix(P.handL, [-2.6, 1.5, 0.3], m); P.handR = mix(P.handR, [-2.6, -1.5, 0.3], m);
     }
-    if (e.dive && e.fall !== undefined && t >= e.fall) { P.handL = [1.6, 1.2, 11]; P.handR = [1.6, -1.2, 11]; }
-    const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-    P.hipL = add(P.hip, [0, 0.6, 0]); P.hipR = add(P.hip, [0, -0.6, 0]);
-    P.shL = add(P.neck, [0, 1.0, -0.3]); P.shR = add(P.neck, [0, -1.0, -0.3]);
-    P.elbL = mix(P.shL, P.handL, 0.45); P.elbR = mix(P.shR, P.handR, 0.45);
+    if (e.dive && e.fall !== undefined && t >= e.fall) { P.handL = [1.5, 1.1, 10.8]; P.handR = [1.5, -1.1, 10.8]; }
+    // Articulaciones derivadas a lo largo del tronco, así funcionan de pie, tirado o deslizando
+    const axis = V.sub(P.neck, P.pelvis);
+    const along = k => add(P.pelvis, axis.map(x => x * k));
+    P.hipL = add(P.pelvis, [0, 0.42, 0]); P.hipR = add(P.pelvis, [0, -0.42, 0]);
+    P.kneeL = add(mix(P.hipL, P.footL, 0.5), [bend, 0, 0.15]); P.kneeR = add(mix(P.hipR, P.footR, 0.5), [bend, 0, 0.15]);
+    P.waistL = add(along(0.22), [0, 0.68, 0]); P.waistR = add(along(0.22), [0, -0.68, 0]);
+    P.shL = add(along(0.94), [0, 1.02, 0]); P.shR = add(along(0.94), [0, -1.02, 0]);
+    P.shortL = add(along(-0.2), [0, 0.8, 0]); P.shortR = add(along(-0.2), [0, -0.8, 0]);
+    P.chest = along(0.94); P.waist = along(0.22);
+    P.elbL = add(mix(P.shL, P.handL, 0.5), [-0.25, 0.1, 0]); P.elbR = add(mix(P.shR, P.handR, 0.5), [-0.25, -0.1, 0]);
     return P;
   }
 
-  // Kits: camiseta, pantalón y medias, como en los sprites de los 90
-  // [camiseta, pantalón, medias, mangas]: las mangas más oscuras para distinguir los brazos del torso
-  const KITS = { N: ["#7cc4f0", "#f4f6f7", "#7cc4f0", "#3f86b8"], S: ["#f07a5a", "#22252a", "#f07a5a", "#b8452b"] };
-  function drawPlayer3(g, c, e, inc, t, labels) {
+  // Cuerpo en coordenadas del mundo (sirve para dibujar el sprite y sus sombras)
+  function bodyWorld(e, inc, t) {
     const p = at(e.k, t), F = facing(e, inc, t), u = F.u, v = { x: -u.y, y: u.x };
     const P = bodyLocal(e, inc, t, F.sp, p, u, v);
     const th = e.fall !== undefined && t > e.fall ? clamp((t - e.fall) / 0.12, 0, 1) * 1.42 : 0;
@@ -1233,38 +1310,129 @@
       if (th) { const a2 = a * Math.cos(th) + z * Math.sin(th); z = Math.max(0.2, z * Math.cos(th) - a * Math.sin(th)); a = a2; }
       return [p.x + a * u.x + b * v.x, p.y + a * u.y + b * v.y, z];
     };
-    const Q = {};
-    for (const k in P) if (Array.isArray(P[k])) Q[k] = proj(c, W3(P[k]));
-    for (const sd of ["L", "R"]) if (Q["hip" + sd] && Q["foot" + sd]) Q["knee" + sd] = { x: (Q["hip" + sd].x + Q["foot" + sd].x) / 2, y: (Q["hip" + sd].y + Q["foot" + sd].y) / 2 };
+    const pts = {};
+    for (const k in P) if (Array.isArray(P[k])) pts[k] = W3(P[k]);
+    let studs = null;
+    if (P.studs) studs = [W3([P.footR[0] + 0.5, P.footR[1] - 0.35, P.footR[2]]), W3([P.footR[0] + 0.5, P.footR[1] + 0.35, P.footR[2]])];
+    return { e, p, u, v, pts, studs };
+  }
+
+  // Sombras: una por cada torre de focos (la cruz típica de los partidos de noche) y sombra de contacto
+  const LIMBS = [["hipL", "kneeL"], ["kneeL", "footL"], ["hipR", "kneeR"], ["kneeR", "footR"], ["shL", "elbL"], ["elbL", "handL"], ["shR", "elbR"], ["elbR", "handR"]];
+  function drawShadows(g, c, bodies, ball) {
+    const s = SBUF.getContext("2d");
+    for (const T of TOWERS) {
+      s.clearRect(0, 0, LW, LH);
+      const onGround = P => { const f = P[2] / Math.max(1, T[2] - P[2]); return proj(c, [P[0] + (P[0] - T[0]) * f, P[1] + (P[1] - T[1]) * f, 0.03]); };
+      for (const B of bodies) {
+        const Q = {};
+        for (const k in B.pts) Q[k] = onGround(B.pts[k]);
+        const mid = proj(c, [B.p.x, B.p.y, 0]);
+        if (!mid) continue;
+        const w = m => Math.max(1, Math.round(m * mid.s));
+        const ln = (a, b, ww) => { if (Q[a] && Q[b]) pxLine(s, Q[a].x, Q[a].y, Q[b].x, Q[b].y, ww, "#000"); };
+        for (const [a, b] of LIMBS) ln(a, b, w(0.6));
+        ln("waist", "chest", w(1.6)); ln("pelvis", "waist", w(1.3));
+        if (Q.head) pxDisc(s, Q.head.x, Q.head.y, w(0.5), "#000");
+      }
+      const bq = onGround([ball.x, ball.y, ball.z + 0.65]);
+      if (bq) pxDisc(s, bq.x, bq.y, 1, "#000");
+      g.globalAlpha = 0.17; g.drawImage(SBUF, 0, 0); g.globalAlpha = 1;
+    }
+    // sombra de contacto bajo los pies
+    s.clearRect(0, 0, LW, LH);
+    for (const B of bodies) {
+      const q = proj(c, [B.p.x, B.p.y, 0]);
+      if (q) pxEllipse(s, q.x, q.y, Math.max(1, Math.round(1.3 * q.s)), Math.max(0, Math.round(0.35 * q.s)), "#000");
+    }
+    const bq = proj(c, [ball.x, ball.y, 0]);
+    if (bq) pxEllipse(s, bq.x, bq.y, Math.max(1, Math.round(0.6 * bq.s)), 0, "#000");
+    g.globalAlpha = 0.35; g.drawImage(SBUF, 0, 0); g.globalAlpha = 1;
+  }
+
+  function drawBall3(g, c, b) {
+    const q = proj(c, [b.x, b.y, b.z + 0.65]);
+    if (!q) return;
+    const r = Math.max(1, Math.round(0.65 * q.s)), x = Math.round(q.x), y = Math.round(q.y);
+    pxDisc(g, x, y, r + 1, "#0b0f0c");
+    pxDisc(g, x, y, r, "#e9ecef");
+    if (r >= 2) { pxDisc(g, x - 1, y - 1, r - 1, "#ffffff"); g.fillStyle = "#9aa3ab"; g.fillRect(x + r - 1, y, 1, r); }
+  }
+
+  // Kits: [camiseta, pantalón, medias]
+  const KITS = { N: ["#7cc4f0", "#eef1f3", "#7cc4f0"], S: ["#f07a5a", "#2a2d33", "#f07a5a"] };
+  const SKIN = "#d9a77e", HAIR = "#35241a", BOOT = "#141414";
+  function drawPlayer3(g, c, B, labels) {
+    const { e, p, u, v, pts } = B;
     const mid = proj(c, [p.x, p.y, 5]);
     if (!mid) return;
+    const Q = {};
+    for (const k in pts) Q[k] = proj(c, pts[k]);
     const s = mid.s, px = m => Math.max(1, Math.round(m * s));
-    const [shirt, shorts, socks, sleeve] = e.gk ? [teamColor(e), "#22252a", teamColor(e), e.t === "N" ? "#b89a2a" : "#7a57a8"] : KITS[e.t];
-    const OUT = "#0b0f0c", SKIN = "#e2b48a", HAIR = "#3a2618", BOOT = "#101010";
-    const parts = [
-      ["hipL", "kneeL", px(0.7), SKIN], ["kneeL", "footL", px(0.7), socks],
-      ["hipR", "kneeR", px(0.7), SKIN], ["kneeR", "footR", px(0.7), socks],
-      ["hip", "neck", Math.max(2, px(1.9)), shirt],
-      ["hipL", "hipR", px(1.3), shorts],
-      ["shL", "elbL", px(0.65), sleeve], ["elbL", "handL", px(0.55), SKIN],
-      ["shR", "elbR", px(0.65), sleeve], ["elbR", "handR", px(0.55), SKIN]
-    ];
-    const hr = Math.max(1, Math.round(0.85 * s));
-    // contorno
-    for (const [a, b, w] of parts) if (Q[a] && Q[b]) pxLine(g, Q[a].x, Q[a].y, Q[b].x, Q[b].y, w + 2, OUT);
-    if (Q.head) pxDisc(g, Q.head.x, Q.head.y, hr + 1, OUT);
-    // color
-    for (const [a, b, w, col] of parts) if (Q[a] && Q[b]) pxLine(g, Q[a].x, Q[a].y, Q[b].x, Q[b].y, w, col);
-    for (const f of ["footL", "footR"]) if (Q[f]) { const w = px(0.9); g.fillStyle = BOOT; g.fillRect(Math.round(Q[f].x) - (w >> 1), Math.round(Q[f].y) - 1, w + 1, Math.max(2, px(0.5))); }
-    if (P.studs) {
-      // tacos por delante, mirando al rival
-      const a = proj(c, W3([P.footR[0] + 0.5, P.footR[1] - 0.35, P.footR[2]])), b = proj(c, W3([P.footR[0] + 0.5, P.footR[1] + 0.35, P.footR[2]]));
+    const fog = clamp((mid.d - 150) / 700, 0, 0.5);
+    const [shirt, shorts, socks] = e.gk ? [teamColor(e), "#2a2d33", teamColor(e)] : KITS[e.t];
+    // luz principal: la torre más cercana
+    const T = TOWERS.reduce((a, b) => Math.hypot(b[0] - p.x, b[1] - p.y) < Math.hypot(a[0] - p.x, a[1] - p.y) ? b : a);
+    const lx = T[0] - p.x, ly = T[1] - p.y, litL = (v.x * lx + v.y * ly) > 0; // ¿el lado izquierdo (L) mira a la luz?
+    const col = (h, lit) => tone(h, lit === undefined ? 0.92 : lit ? 1.12 : 0.66, fog);
+    const side = k => k.endsWith("L") ? litL : !litL;
+
+    // formas: [tipo, puntos, grosor, color base, lado]
+    const shapes = [];
+    const limb = (a, b, w, h) => shapes.push(["l", [a, b], w, h, side(a)]);
+    const quad = (ks, h, lit) => shapes.push(["p", ks, 0, h, lit]);
+    // piernas y brazos del lado en sombra primero, luego tronco, luego el lado iluminado
+    const legs = sd => { limb("hip" + sd, "knee" + sd, px(0.72), SKIN); limb("knee" + sd, "foot" + sd, px(0.58), socks); };
+    const arm = sd => { limb("sh" + sd, "elb" + sd, px(0.6), shirt); limb("elb" + sd, "hand" + sd, px(0.46), SKIN); };
+    const far = litL ? "R" : "L", near = litL ? "L" : "R";
+    legs(far); arm(far);
+    quad(["shortL", "shortR", "waistR", "waistL"], shorts);
+    quad(["waistL", "waistR", "shR", "shL"], shirt);
+    quad(litL ? ["waist", "waistR", "shR", "chest"] : ["waist", "waistL", "shL", "chest"], shirt, false); // mitad en sombra
+    legs(near); arm(near);
+
+    const paint = (mono, dx, dy) => {
+      for (const [type, ks, w, h, lit] of shapes) {
+        const q = ks.map(k => Q[k]);
+        if (q.some(x => !x)) continue;
+        const fill = mono || col(h, lit);
+        if (type === "l") pxLine(g, q[0].x + dx, q[0].y + dy, q[1].x + dx, q[1].y + dy, w, fill);
+        else pxPoly(g, q.map(o => [o.x + dx, o.y + dy]), fill);
+      }
+      for (const f of ["footL", "footR"]) if (Q[f]) {
+        const w = px(0.95);
+        g.fillStyle = mono || BOOT; g.fillRect(Math.round(Q[f].x) - (w >> 1) + dx, Math.round(Q[f].y) - 1 + dy, w + 1, Math.max(2, px(0.45)));
+      }
+      if (Q.head) pxDisc(g, Q.head.x + dx, Q.head.y + dy, Math.max(1, Math.round(0.62 * s)), mono || col(SKIN, true));
+    };
+    // contorno oscuro de 1 píxel, como los sprites de la época
+    const OUT = tone("#0d120e", 1, fog * 0.5);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) paint(OUT, dx, dy);
+    paint(null, 0, 0);
+    // brillo en el borde iluminado del torso
+    if (s > 1.2 && Q.shL && Q.waistL && Q.shR && Q.waistR) {
+      const [a, b] = litL ? [Q.shL, Q.waistL] : [Q.shR, Q.waistR];
+      pxLine(g, a.x, a.y, b.x, b.y, 1, col(shirt, true));
+    }
+    if (B.studs) {
+      const a = proj(c, B.studs[0]), b = proj(c, B.studs[1]);
       if (a && b) pxLine(g, a.x, a.y, b.x, b.y, Math.max(1, px(0.2)), "#f4f4f4");
     }
+    // cabeza: pelo, cara en sombra y nuca si está de espaldas
     if (Q.head) {
-      pxDisc(g, Q.head.x, Q.head.y, hr, SKIN);
-      g.fillStyle = HAIR; g.fillRect(Math.round(Q.head.x) - hr, Math.round(Q.head.y) - hr, 2 * hr + 1, Math.max(1, hr));
-      if (labels) pxNumber(g, dorsal(e), Q.head.x, Q.head.y - hr - 9, teamColor(e));
+      const r = Math.max(1, Math.round(0.62 * s)), hx = Math.round(Q.head.x), hy = Math.round(Q.head.y);
+      const away = u.x * c.fw[0] + u.y * c.fw[1] > 0.3;
+      g.fillStyle = col(HAIR, true);
+      if (away) pxDisc(g, hx, hy, r, col(HAIR, true));
+      else g.fillRect(hx - r, hy - r, 2 * r + 1, Math.max(1, Math.ceil(r * 0.8)));
+      if (r >= 2) {
+        const sx = (proj(c, [p.x + v.x, p.y + v.y, 9.4]) || Q.head).x > Q.head.x ? 1 : -1; // hacia dónde queda el lado L en pantalla
+        const darkSide = litL ? -sx : sx;
+        g.fillStyle = col(away ? HAIR : SKIN, false);
+        g.fillRect(darkSide > 0 ? hx + 1 : hx - r, hy - r + 1, r, 2 * r - 1);
+        if (!away && r >= 3) { g.fillStyle = "#1a1210"; g.fillRect(hx - 1, hy, 1, 1); g.fillRect(hx + 1, hy, 1, 1); }
+      }
+      if (labels) pxNumber(g, dorsal(e), Q.head.x, Q.head.y - r - 9, teamColor(e));
     }
   }
 
