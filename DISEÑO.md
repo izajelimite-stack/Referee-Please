@@ -123,6 +123,25 @@ pitar y cuándo dejar jugar (como en *Papers, Please*: la mayoría de pasaportes
   (limpia, amarilla o roja), disparo con jugada previa (empujón o limpio), **lejos del balón**
   (codazo o forcejeo) y juego sin incidencias.
 
+**Tiempo para decidir**: las jugadas duran 5 s. Al terminar, la imagen se congela con un
+"¿PITAS?" y 4 s de cuenta atrás; el botón de pitar late. "Dejar seguir" salta la espera.
+
+**Jugadas basadas en casos reales** (el caso se revela en el informe final):
+
+| Jugada | Caso real | Variantes |
+|---|---|---|
+| Balón aéreo en el área | Maradona, México 86 | Cabezazo (gol) o mano por encima de la cabeza |
+| Disparo al larguero | Lampard 2010 / Hurst 1966 | Bota dentro entero o sobre la línea (cámara Línea de gol) |
+| Cabezazo en un córner | Suárez, Sudáfrica 2010 | Manos en la línea (penalti y roja) o despeje de cabeza |
+| Falta lateral | Henry ante Irlanda, 2009 | Control con la mano o con el muslo antes del gol |
+| Balón parado junto a la banda | Rivaldo, 2002 | Teatro (amarilla a los dos) o balonazo a la cara (roja) |
+| Mano a mano con el portero | Schumacher sobre Battiston, 1982 | Arrollada (penalti y roja) o salida limpia |
+| Lejos del balón | Zidane 2006 / Tassotti 1994 | Cabezazo, codazo o forcejeo |
+| Entrada en el medio campo | De Jong, final 2010 | Limpia, amarilla, tacos al tobillo o plancha al pecho |
+
+Para probar una jugada concreta: abrir el prototipo con `#tipo-god` (o `ghost`, `line`,
+`henry`, `theatre`, `keeper`, `offball`, `tackle`, `offside`, `box`, `hand`, `buildup`, `filler`).
+
 **Cuatro barras** (a lo *Reigns*): confianza del comité, enfado de la grada local, enfado de
 los visitantes y temperatura de los jugadores. Si una llega al límite, el partido se suspende:
 invasión de campo, retirada del visitante, tángana o te relevan.

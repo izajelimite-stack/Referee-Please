@@ -109,6 +109,13 @@
 
   .whistle { font-family: var(--f-display); font-size: 22px; padding: 12px; cursor: pointer; background: var(--live); color: #fff; border: 0; display: flex; gap: 12px; align-items: baseline; justify-content: center; }
   .whistle small { font-family: var(--f-body); font-size: 12px; opacity: .8; }
+  .whistle.hot { background: #ff3b2a; box-shadow: 0 0 0 3px var(--amber); animation: pulse .7s ease-in-out infinite alternate; }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.025); } }
+  @media (prefers-reduced-motion: reduce) { .whistle.hot { animation: none; } }
+  .ask { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; z-index: 2; pointer-events: none;
+    font-family: var(--f-display); font-size: clamp(22px, 5vw, 40px); color: #fff; background: rgba(11,14,18,.72); padding: 10px 20px; display: flex; gap: 14px; align-items: baseline; border: 2px solid var(--amber); }
+  .ask b { color: var(--amber); }
+  .report .caso { font-size: 13px; color: #7a5a14; font-style: italic; margin-top: 3px; }
   .whistle:disabled { background: var(--panel2); color: var(--muted); cursor: default; }
   .cardsbox { display: grid; gap: 6px; }
   .cardsbox h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
@@ -196,7 +203,7 @@
 <script>
 (() => {
   "use strict";
-  const W = 320, H = 200, CW = 639, CH = 399, LIVE_MS = 3600;
+  const W = 320, H = 200, CW = 639, CH = 399, LIVE_MS = 5000;
   const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const COL = {
     pitch: "#2f6b3f", pitch2: "#2a613a", chalk: "#dfe8d8", norte: "#7cc4f0", sur: "#f07a5a",
@@ -430,10 +437,17 @@
         return n;
       }
     };
-    const w = [["offside", 1], ["box", 1], ["hand", 0.7], ["tackle", 1.4], ["buildup", 0.8], ["offball", 0.4 + temp / 80], ["filler", 1.3]];
+    const prevType = i ? st.clips[i - 1].type : null;
+    const w = [["god", 1.1], ["ghost", 1], ["line", 1], ["henry", 1], ["theatre", 0.9], ["keeper", 0.9],
+      ["offside", 0.8], ["box", 0.8], ["hand", 0.5], ["tackle", 1.1], ["buildup", 0.5], ["offball", 0.5 + temp / 80], ["filler", 1.1]]
+      .filter(([k]) => k !== prevType);
     let x = r() * w.reduce((s, a) => s + a[1], 0), type = "filler";
     for (const [k, v] of w) { if ((x -= v) < 0) { type = k; break; } }
-    const inc = { offside: genOffside, box: genBox, hand: genHand, tackle: genTackle, buildup: genBuildup, offball: genOffball, filler: genFiller }[type](ctx);
+    // Para probar: abrir la página con #tipo-god (o ghost, line, henry, theatre, keeper...) fuerza ese tipo de jugada
+    const forced = /^#tipo-(\w+)$/.exec(location.hash);
+    if (forced) type = forced[1];
+    const inc = { offside: genOffside, box: genBox, hand: genHand, tackle: genTackle, buildup: genBuildup, offball: genOffball, filler: genFiller,
+      god: genGod, ghost: genGhost, line: genLine, henry: genHenry, theatre: genTheatre, keeper: genKeeper }[type](ctx);
     const prev = i ? st.clips[i - 1].minute : 0;
     inc.minute = clamp(Math.round(4 + i * 86 / (CLIPS_PER_MATCH - 1) + R(-3, 3)), prev + 2, 90);
     inc.atk = atk; inc.def = def; inc.type = type;
@@ -571,7 +585,8 @@
 
   // Entrada en el medio campo: limpia, imprudente (amarilla) o con los tacos (roja).
   function genTackle({ R, pick, chance, atk, def, name, say, pInf, temp, num, booked }) {
-    const sev = !chance(pInf) ? "limpia" : chance(0.25 + temp / 250) ? "roja" : "amarilla";
+    const sev = !chance(pInf) ? "limpia" : chance(0.25 + temp / 250) ? (chance(0.45) ? "alta" : "roja") : "amarilla";
+    const high = sev === "alta";
     const clean = sev === "limpia", side = chance(0.5) ? 1 : -1;
     const v10 = num(atk), f = num(def, true), a8 = num(atk), d8 = num(def), d4 = num(def);
     const second = sev === "amarilla" && booked(def, f);
@@ -579,29 +594,30 @@
     const B = clean ? { x: Ac.x + 5, y: Ac.y } : { x: Ac.x + 2, y: Ac.y };
     const Dc = clean ? { x: B.x, y: B.y + side * 6 } : { x: Ac.x, y: Ac.y + side * 6 };
     const kick = clean ? { t0: 0.4, t1: 0.5, t2: 0.62, h: 0.4, target: "ball", studs: false }
-      : { t0: 0.4, t1: 0.5, t2: 0.62, h: sev === "roja" ? 2.6 : 0.7, target: atk + v10, studs: sev === "roja" };
+      : { t0: 0.4, t1: 0.5, t2: 0.62, h: high ? 6.2 : sev === "roja" ? 2.6 : 0.7, target: atk + v10, studs: sev !== "amarilla" };
     return {
-      title: "Entrada en el medio campo", infraction: !clean, severe: sev === "roja", goalClip: false,
-      hint: ["ASISTENTE", say(sev === "roja" ? "¡Con los tacos! Eso es roja." : sev === "amarilla" ? "Llega tarde. Amarilla." : "Ha ido al balón. Limpia.",
-        sev === "roja" ? "Fuerte, pero amarilla." : sev === "amarilla" ? "Ha ido al balón. Limpia." : "Llega tarde. Amarilla.", `Entrada fuerte del ${f}.`)],
-      varHint: ["SALA VAR", say(sev === "roja" ? "Revisa: posible roja directa." : "Nada grave para nosotros.",
-        sev === "roja" ? "Nada grave. Amarilla y seguimos." : "Revisa, puede ser roja.", "Tú lo has visto más cerca.")],
+      title: "Entrada en el medio campo", infraction: !clean, severe: sev === "roja" || high, goalClip: false,
+      hint: ["ASISTENTE", say(sev === "roja" || high ? "¡Con los tacos! Eso es roja." : sev === "amarilla" ? "Llega tarde. Amarilla." : "Ha ido al balón. Limpia.",
+        sev === "roja" || high ? "Fuerte, pero amarilla." : sev === "amarilla" ? "Ha ido al balón. Limpia." : "Llega tarde. Amarilla.", `Entrada fuerte del ${f}.`)],
+      varHint: ["SALA VAR", say(sev === "roja" || high ? "Revisa: posible roja directa." : "Nada grave para nosotros.",
+        sev === "roja" || high ? "Nada grave. Amarilla y seguimos." : "Revisa, puede ser roja.", "Tú lo has visto más cerca.")],
       events: [[0.5, "Entrada"]],
       focus: atk + v10, focusZ: 2,
       wOpts: [
         { label: `Falta del ${f}, sin tarjeta`, grade: sev === "amarilla" ? "partial" : "wrong", fav: "atk", mag: 4 },
         { label: `Falta y amarilla al ${f}`, grade: sev === "amarilla" ? "correct" : "wrong", fav: "atk", mag: 6, cardTo: { t: def, n: f, kind: "Y" } },
-        { label: `Falta y roja directa al ${f}`, grade: sev === "roja" ? "correct" : second ? "partial" : "wrong", fav: "atk", mag: 12, cardTo: { t: def, n: f, kind: "R" } },
+        { label: `Falta y roja directa al ${f}`, grade: sev === "roja" || high ? "correct" : second ? "partial" : "wrong", fav: "atk", mag: 12, cardTo: { t: def, n: f, kind: "R" } },
         { label: NOTHING, grade: clean ? "partial" : "wrong", noFoul: true }
       ],
       noWhistle: { grade: clean ? "correct" : "wrong" },
-      truth: clean ? "Dejar seguir" : sev === "roja" ? `Roja directa al ${f}` : second ? `Amarilla al ${f} (la segunda: expulsión)` : `Falta y amarilla al ${f}`,
-      why: clean ? `El ${f} fue al balón y lo tocó limpiamente.` : sev === "roja" ? `El ${f} entró con los tacos a la altura de la espinilla.`
+      truth: clean ? "Dejar seguir" : sev === "roja" || high ? `Roja directa al ${f}` : second ? `Amarilla al ${f} (la segunda: expulsión)` : `Falta y amarilla al ${f}`,
+      ref: high ? "De Jong a Xabi Alonso, final del Mundial 2010: plancha en el pecho y el árbitro solo mostró amarilla." : null,
+      why: clean ? `El ${f} fue al balón y lo tocó limpiamente.` : high ? `El ${f} levantó la pierna con los tacos a la altura del pecho del ${v10}.` : sev === "roja" ? `El ${f} entró con los tacos a la altura de la espinilla.`
         : `El ${f} llegó tarde y le dio en el tobillo, sin tacos: entrada imprudente.${second ? " Ya tenía una amarilla." : ""}`,
       ents: [
         pl(atk, v10, [[0, A0.x, A0.y], [0.5, Ac.x, Ac.y], ...(clean ? [[0.7, Ac.x + 6, Ac.y], [1, Ac.x + 9, Ac.y]] : [[0.56, Ac.x + 4, Ac.y + 1], [1, Ac.x + 7, Ac.y + 2]])],
           clean ? {} : { fall: 0.55 }),
-        pl(def, f, [[0, Dc.x - 10, Dc.y + side * 26], [0.5, Dc.x, Dc.y], [0.6, Dc.x + 4, Dc.y - side * 2], [1, Dc.x + 6, Dc.y - side]], { kick }),
+        pl(def, f, [[0, Dc.x - 10, Dc.y + side * 26], [0.5, Dc.x, Dc.y], [0.6, Dc.x + 4, Dc.y - side * 2], [1, Dc.x + 6, Dc.y - side]], { kick, ...(high ? { jump: { t0: 0.4, t1: 0.58, h: 0.7 } } : {}) }),
         pl(atk, a8, [[0, A0.x - 10, A0.y - side * 40], [1, A0.x + 30, A0.y - side * 36]]),
         pl(def, d8, [[0, A0.x + 70, A0.y - side * 14], [1, A0.x + 64, A0.y - side * 6]]),
         pl(def, d4, [[0, A0.x + 116, 100], [1, A0.x + 108, 102]])
@@ -650,39 +666,286 @@
     };
   }
 
-  // Lejos del balón: codazo (roja) o forcejeo normal (nada).
-  function genOffball({ R, chance, atk, def, say, pInf, num }) {
-    const elbow = chance(pInf + 0.1);
+  // Lejos del balón: codazo (Tassotti, 94), cabezazo (Zidane, 2006) o forcejeo normal.
+  function genOffball({ R, chance, pick, atk, def, say, pInf, num }) {
+    const kind = chance(pInf + 0.1) ? pick(["codo", "cabeza"]) : "limpio", hit = kind !== "limpio";
     const p1 = num(atk), p2 = num(atk), p3 = num(atk), vic = num(atk), agg = num(def, true), d1 = num(def), d2 = num(def);
     const B0 = { x: R(130, 200), y: R(80, 130) }, Q = { x: B0.x + 6, y: B0.y - 20 };
     const P2 = { x: B0.x + 18, y: B0.y - 6 }, P3 = { x: B0.x + 10, y: B0.y + 16 };
+    const what = kind === "codo" ? "un codazo en la cara" : "un cabezazo en el pecho";
+    const pair = kind === "cabeza"
+      ? [pl(atk, vic, [[0, Q.x, Q.y], [1, Q.x + 0.5, Q.y]], { face: [Q.x + 0.3, Q.y + 3], fall: 0.52, fallBack: true }),
+        pl(def, agg, [[0, Q.x + 0.6, Q.y + 3.6], [0.44, Q.x + 0.3, Q.y + 2.7], [1, Q.x + 0.2, Q.y + 3.2]], { face: [Q.x, Q.y], butt: { t0: 0.44, t1: 0.5, target: atk + vic } })]
+      : [pl(atk, vic, [[0, Q.x, Q.y], [0.54, Q.x + 8, Q.y], [1, Q.x + 11, Q.y]], kind === "codo" ? { fall: 0.55 } : {}),
+        pl(def, agg, [[0, Q.x - 1, Q.y + (kind === "codo" ? 2.6 : 3.2)], [0.54, Q.x + 7, Q.y + (kind === "codo" ? 2.6 : 3.2)], [1, Q.x + 13, Q.y + 3.4]],
+          kind === "codo" ? { elbow: { t0: 0.44, t1: 0.52, target: atk + vic } } : {})];
     return {
-      title: "Lejos del balón", infraction: elbow, severe: elbow, goalClip: false,
-      hint: ["ASISTENTE", say(elbow ? `¡El ${agg} le ha soltado un codazo al ${vic}!` : "Forcejeo normal, nada.",
-        elbow ? "Forcejeo normal, nada." : `¡El ${agg} le ha soltado un codazo al ${vic}!`, "Estaba mirando el balón, no lo he visto.")],
-      varHint: ["SALA VAR", say(elbow ? "Revisa: posible agresión lejos del balón." : "Nada punible.",
-        elbow ? "Nada punible." : "Revisa: posible agresión lejos del balón.", "No tenemos buen ángulo.")],
-      events: [[0.5, "Contacto"]],
-      focus: atk + vic, focusZ: 8,
+      title: "Lejos del balón", infraction: hit, severe: hit, goalClip: false,
+      hint: ["ASISTENTE", say(hit ? `¡El ${agg} le ha dado ${what} al ${vic}!` : "Forcejeo normal, nada.",
+        hit ? "Forcejeo normal, nada." : `¡El ${agg} le ha dado ${what} al ${vic}!`, "Estaba mirando el balón, no lo he visto.")],
+      varHint: ["SALA VAR", say(hit ? "Revisa: posible agresión lejos del balón." : "Nada punible.",
+        hit ? "Nada punible." : "Revisa: posible agresión lejos del balón.", "No tenemos buen ángulo.")],
+      events: [[0.47, "Contacto"]],
+      focus: atk + vic, focusZ: 7,
       wOpts: [
-        { label: `Roja directa al ${agg} por agresión`, grade: elbow ? "correct" : "wrong", fav: "atk", mag: 12, cardTo: { t: def, n: agg, kind: "R" } },
+        { label: `Roja directa al ${agg} por agresión`, grade: hit ? "correct" : "wrong", fav: "atk", mag: 12, cardTo: { t: def, n: agg, kind: "R" } },
         { label: `Amarilla al ${agg}`, grade: "wrong", fav: "atk", mag: 5, cardTo: { t: def, n: agg, kind: "Y" } },
-        { label: NOTHING, grade: elbow ? "wrong" : "partial", noFoul: true }
+        { label: NOTHING, grade: hit ? "wrong" : "partial", noFoul: true }
       ],
-      noWhistle: { grade: elbow ? "wrong" : "correct" },
-      truth: elbow ? `Roja directa al ${agg}` : "Dejar seguir",
-      why: elbow ? `Lejos del balón, el ${agg} le dio un codazo en la cara al ${vic}. Conducta violenta.` : `El ${agg} y el ${vic} solo forcejearon hombro con hombro.`,
+      noWhistle: { grade: hit ? "wrong" : "correct" },
+      truth: hit ? `Roja directa al ${agg}` : "Dejar seguir",
+      why: hit ? `Lejos del balón, el ${agg} le dio ${what} al ${vic}. Conducta violenta.` : `El ${agg} y el ${vic} solo forcejearon hombro con hombro.`,
+      ref: kind === "cabeza" ? "Zidane a Materazzi, final del Mundial 2006: el árbitro no lo vio y lo expulsó tras el aviso del cuarto árbitro."
+        : kind === "codo" ? "Tassotti a Luis Enrique, Mundial 94: el árbitro no vio el codazo; después le cayeron ocho partidos." : null,
       ents: [
         pl(atk, p1, [[0, B0.x - 2, B0.y], [0.35, B0.x + 2, B0.y + 2], [1, B0.x + 6, B0.y + 4]]),
         pl(atk, p2, [[0, P2.x, P2.y], [0.7, P2.x + 4, P2.y + 2], [1, P2.x + 8, P2.y]]),
         pl(atk, p3, [[0, P3.x - 4, P3.y], [0.7, P3.x, P3.y], [1, P3.x + 6, P3.y]]),
         pl(def, d1, [[0, P2.x + 12, P2.y + 4], [1, P2.x + 6, P2.y + 8]]),
         pl(def, d2, [[0, P3.x + 14, P3.y - 4], [1, P3.x + 8, P3.y - 2]]),
-        pl(atk, vic, [[0, Q.x, Q.y], [0.54, Q.x + 8, Q.y], [1, Q.x + 11, Q.y]], elbow ? { fall: 0.55 } : {}),
-        pl(def, agg, [[0, Q.x - 1, Q.y + (elbow ? 2.6 : 3.2)], [0.54, Q.x + 7, Q.y + (elbow ? 2.6 : 3.2)], [1, Q.x + 13, Q.y + 3.4]],
-          elbow ? { elbow: { t0: 0.44, t1: 0.52, target: atk + vic } } : {})
+        ...pair
       ],
       ball: [[0, B0.x, B0.y], [0.35, P2.x - 1, P2.y], [0.7, P3.x + 1, P3.y], [1, P3.x + 7, P3.y]]
+    };
+  }
+
+  // ===== Jugadas inspiradas en casos reales (el caso se revela en el informe) =====
+
+  // Maradona, México 86: ¿cabezazo o mano por encima de la cabeza?
+  function genGod({ R, chance, atk, def, say, pInf, num }) {
+    const hand = chance(pInf);
+    const s = num(atk), wg = num(atk), d1 = num(def), d2 = num(def), a2 = num(atk);
+    const side = chance(0.5) ? 1 : -1, yC = R(95, 105);
+    const W0 = { x: R(262, 278), y: side > 0 ? R(165, 178) : R(22, 35) };
+    const A0 = { x: 286, y: yC + side * 6 }, A = { x: 294.8, y: yC };
+    const u = nrm(A.x - A0.x, A.y - A0.y);
+    const lift = hand ? 0.9 : 1.9;
+    const C = { x: A.x + u.x * 1.35, y: A.y + u.y * 1.35 }, zc = hand ? 10.9 : 9.4 + lift - 0.35;
+    return {
+      title: "Balón aéreo en el área", infraction: hand, goalClip: true,
+      post: [["GRADA", atk === "N" ? "¡¡GOOOL!!" : "Silencio... gol del visitante."]],
+      hint: ["ASISTENTE", say(hand ? `¡Ha sido con la mano! Lo ha metido con la mano el ${s}.` : "Cabezazo limpio. Gol.",
+        hand ? "Cabezazo limpio. Gol." : `¡Ha sido con la mano! Lo ha metido con la mano el ${s}.`, "El portero me tapaba, no lo he visto.")],
+      varHint: ["SALA VAR", say(hand ? `Revisa el remate del ${s}: puede haber mano.` : "Remate de cabeza, sin nada raro.",
+        hand ? "Remate de cabeza, sin nada raro." : `Revisa el remate del ${s}: puede haber mano.`, "Es tu decisión.")],
+      events: [[0.15, "Centro"], [0.5, "Remate"], [0.72, "Gol"]],
+      focus: atk + s, focusZ: 10.5,
+      wOpts: [
+        { label: `Mano del ${s} (amarilla)`, grade: hand ? "correct" : "wrong", fav: "def", mag: 14, cardTo: { t: atk, n: s, kind: "Y" } },
+        { label: NOTHING, grade: hand ? "wrong" : "partial", noFoul: true }
+      ],
+      endOpts: [
+        { label: "Gol válido", grade: hand ? "wrong" : "correct", fav: "atk", mag: 10, goal: true },
+        { label: `Anular: mano del ${s} (amarilla)`, grade: hand ? "correct" : "wrong", fav: "def", mag: 18, cardTo: { t: atk, n: s, kind: "Y" } }
+      ],
+      truth: hand ? `Anular: mano del ${s}` : "Gol válido",
+      why: hand ? `El ${s} saltó menos que el portero y golpeó el balón con la mano, por encima de la cabeza.` : `El ${s} ganó el salto y remató de cabeza.`,
+      ref: "Maradona ante Inglaterra, México 86: el árbitro dio por bueno un gol marcado con la mano.",
+      ents: [
+        pl(atk, wg, [[0, W0.x - 8, W0.y], [0.15, W0.x, W0.y], [1, W0.x + 6, W0.y - side * 2]]),
+        pl(atk, s, [[0, A0.x - 6, A0.y + side * 3], [0.4, A0.x + 4, A0.y - side * 1.5], [0.5, A.x, A.y], [1, A.x + 3, A.y - side]],
+          { jump: { t0: 0.4, t1: 0.62, h: lift }, ...(hand ? { reach: { t0: 0.42, t1: 0.5, t2: 0.58, hand: side > 0 ? "L" : "R", target: "ball", tc: 0.5 } } : {}) }),
+        pl(def, d1, [[0, A0.x - 8, A0.y + side * 8], [0.5, A.x - 3.5, A.y + side * 3.5], [1, A.x - 1, A.y + side * 2]], { jump: { t0: 0.44, t1: 0.62, h: 0.9 } }),
+        pl(atk, a2, [[0, 262, 100 - side * 14], [1, 280, 100 - side * 10]]),
+        pl(def, d2, [[0, 270, 100 - side * 18], [1, 284, 100 - side * 12]]),
+        gk(def, [[0, 299, 100], [0.45, 298.6, C.y + side * 1.4], [1, 299, C.y + side]],
+          { jump: { t0: 0.4, t1: 0.62, h: 1.3 }, reach: { t0: 0.36, t1: 0.52, t2: 0.7, hand: "both", target: [C.x + 1.6, C.y + side * 0.8, 12.4] } })
+      ],
+      ball: [[0, W0.x - 6, W0.y], [0.15, W0.x + 1, W0.y], [0.5, C.x, C.y], [0.72, 307.5, yC - side * 2], [1, 309, yC - side * 2]],
+      ballZ: [[0, 0], [0.15, 0.5], [0.33, 16], [0.5, zc], [0.72, 5], [0.85, 1], [1, 0]]
+    };
+  }
+
+  // Lampard 2010 / Hurst 1966: el balón bota tras el larguero, ¿entró entero?
+  function genGhost({ R, chance, atk, def, say, num }) {
+    const inGoal = chance(0.5);
+    const sh = num(atk), a2 = num(atk), d1 = num(def), d2 = num(def);
+    const S = { x: R(262, 272), y: R(90, 110) }, yb = R(96, 104);
+    const xb = inGoal ? R(305.1, 306.3) : R(303.4, 304.4);
+    const cm = Math.round(Math.abs(xb - 304.65) * 18);
+    return {
+      title: "Disparo al larguero", infraction: true, goalClip: true, question: "¿Ha entrado el balón?",
+      post: [["GRADA", "¡¡Ha entrado!! ¡¡Ha entrado!!"], ["GRADA", "¡Nooo! ¡Fuera, fuera!"]],
+      hint: ["ASISTENTE", say(inGoal ? "Desde aquí ha botado dentro." : "No ha entrado entero, ha botado en la línea.",
+        inGoal ? "No ha entrado entero, ha botado en la línea." : "Desde aquí ha botado dentro.", "Uf... no lo sé. Muy justo.")],
+      varHint: ["SALA VAR", say(inGoal ? "Revisa la cámara de la línea de gol." : "Revisa la línea: parece que no entra entero.",
+        inGoal ? "No vemos que entre entero." : "Parece gol, revisa la línea.", "Sin la cámara de la línea no se sabe.")],
+      events: [[0.35, "Disparo"], [0.52, "Larguero"], [0.64, "Bote"]],
+      focus: "ball", focusZ: 1,
+      wOpts: null,
+      endOpts: [
+        { label: "Gol", grade: inGoal ? "correct" : "wrong", fav: "atk", mag: 10, goal: true },
+        { label: "No es gol: sigue el juego", grade: inGoal ? "wrong" : "correct", fav: "def", mag: 12 }
+      ],
+      truth: inGoal ? "Gol" : "No es gol",
+      why: inGoal ? `El balón botó ${cm} cm por dentro: cruzó la línea entero.` : `El balón botó sobre la línea: le faltaron ${cm} cm para cruzarla entero.`,
+      ref: inGoal ? "Lampard ante Alemania, Sudáfrica 2010: el balón botó dentro y el gol no subió al marcador."
+        : "Hurst en la final del Mundial 66: se dio por bueno un gol en un bote sobre la línea que, según casi todos los análisis, no entró entero.",
+      ents: [
+        pl(atk, sh, [[0, S.x - 8, S.y + 3], [0.35, S.x - 1.5, S.y + 0.5], [1, S.x + 6, S.y]]),
+        pl(atk, a2, [[0, 276, 100 + (S.y > 100 ? -16 : 16)], [1, 290, 100 + (S.y > 100 ? -12 : 12)]]),
+        pl(def, d1, [[0, 282, 110], [1, 288, 106]]),
+        pl(def, d2, [[0, 280, 88], [1, 290, 92]]),
+        gk(def, [[0, 299, 100], [0.5, 299.5, yb + 2], [0.92, 295.2, yb - 2], [1, 295, yb - 2]],
+          { reach: { t0: 0.82, t1: 0.92, t2: 1.2, hand: "both", target: "ball", tc: 0.92 } })
+      ],
+      ball: [[0, S.x - 6, S.y + 2], [0.35, S.x, S.y], [0.52, 304.3, yb], [0.64, xb, yb], [0.78, 297, yb - 1.5], [0.92, 294.8, yb - 2], [1, 294.6, yb - 2]],
+      ballZ: [[0, 0], [0.35, 0.3], [0.52, 13.3], [0.64, 0], [0.78, 5], [0.92, 4.2], [1, 4.2]]
+    };
+  }
+
+  // Suárez, 2010: ¿para el balón en la línea con las manos o de cabeza?
+  function genLine({ R, chance, atk, def, say, pInf, num }) {
+    const hands = chance(pInf);
+    const hd = num(atk), dl = num(def), ck = num(atk), d2 = num(def);
+    const side = chance(0.5) ? 1 : -1, yG = R(95, 105);
+    const W0 = { x: 302, y: side > 0 ? 191 : 9 };
+    const H0 = { x: R(284, 290), y: R(93, 107) }, P = { x: 303.2, y: yG };
+    const u = nrm(H0.x - P.x, H0.y - P.y), v = { x: -u.y, y: u.x }, sg = chance(0.5) ? 1 : -1;
+    const C = hands ? { x: P.x + u.x * 1.2 + v.x * sg * 0.85, y: P.y + u.y * 1.2 + v.y * sg * 0.85 } : { x: P.x + u.x * 0.85, y: P.y + u.y * 0.85 };
+    const zc = hands ? 9.15 : 9.55;
+    return {
+      title: "Cabezazo en un córner", infraction: hands, severe: hands, goalClip: false,
+      hint: ["ASISTENTE", say(hands ? `¡Mano del ${dl} en la línea! ¡Iba dentro!` : `Lo ha sacado de cabeza el ${dl}.`,
+        hands ? `Lo ha sacado de cabeza el ${dl}.` : `¡Mano del ${dl} en la línea! ¡Iba dentro!`, "Había mucha gente, no lo he visto.")],
+      varHint: ["SALA VAR", say(hands ? "Revisa: posible mano en la línea de gol." : "Despeje de cabeza. Nada.",
+        hands ? "Despeje de cabeza. Nada." : "Revisa: posible mano en la línea de gol.", "Es tu decisión.")],
+      events: [[0.12, "Córner"], [0.38, "Cabezazo"], [0.55, "En la línea"]],
+      focus: def + dl, focusZ: 9,
+      wOpts: [
+        { label: `Penalti y roja al ${dl}`, grade: hands ? "correct" : "wrong", fav: "atk", mag: 14, goal: chance(0.7), cardTo: { t: def, n: dl, kind: "R" } },
+        { label: `Penalti y amarilla al ${dl}`, grade: hands ? "partial" : "wrong", fav: "atk", mag: 10, goal: chance(0.7), cardTo: { t: def, n: dl, kind: "Y" } },
+        { label: NOTHING, grade: hands ? "wrong" : "partial", noFoul: true }
+      ],
+      noWhistle: { grade: hands ? "wrong" : "correct" },
+      truth: hands ? `Penalti y roja al ${dl}` : "Dejar seguir",
+      why: hands ? `El ${dl} paró con las manos un balón que entraba: evitó un gol, así que es penalti y roja.` : `El ${dl} despejó de cabeza sobre la línea.`,
+      ref: "Suárez ante Ghana, Sudáfrica 2010: sacó con las manos un balón en la línea. Roja y penalti, que Ghana falló.",
+      ents: [
+        pl(atk, ck, [[0, W0.x - 2, W0.y + side * 2], [0.12, W0.x, W0.y], [1, W0.x - 4, W0.y - side * 3]]),
+        pl(atk, hd, [[0, H0.x - 8, H0.y + 3], [0.38, H0.x, H0.y], [1, H0.x + 4, H0.y]], { jump: { t0: 0.3, t1: 0.46, h: 1.2 } }),
+        pl(def, dl, [[0, P.x - 0.4, P.y + 0.6], [0.55, P.x, P.y], [1, P.x - 0.3, P.y - 0.3]],
+          { face: [H0.x, H0.y], ...(hands ? { block: 0.44 } : { jump: { t0: 0.47, t1: 0.63, h: 0.8 } }) }),
+        pl(def, d2, [[0, H0.x - 4, H0.y - 4], [1, H0.x + 1, H0.y - 3]]),
+        gk(def, [[0, 300, 100], [0.45, 300.5, yG - side * 7], [0.6, 300, yG - side * 4]], { fall: 0.5, dive: true })
+      ],
+      ball: [[0, W0.x, W0.y], [0.12, W0.x - 1, W0.y - side], [0.38, H0.x + 0.9, H0.y], [0.55, C.x, C.y], [0.8, P.x - 12, yG + sg * 8], [1, P.x - 18, yG + sg * 12]],
+      ballZ: [[0, 0], [0.12, 0.3], [0.25, 15], [0.38, 9.95], [0.55, zc], [0.8, 2], [1, 0]]
+    };
+  }
+
+  // Henry, 2009: ¿control con la mano o con el muslo antes del pase de gol?
+  function genHenry({ R, chance, atk, def, say, pInf, num }) {
+    const hand = chance(pInf);
+    const c = num(atk), f = num(atk), d1 = num(def), d2 = num(def);
+    const side = chance(0.5) ? 1 : -1, C = { x: 297, y: 100 + side * R(18, 24) };
+    return {
+      title: "Falta lateral", infraction: hand, goalClip: true,
+      post: [["GRADA", atk === "N" ? "¡¡GOOOL!!" : "Silencio... gol del visitante."], ["GRADA", "¡¡Mano, mano!!"]],
+      hint: ["ASISTENTE", say(hand ? `¡El ${c} la ha bajado con la mano antes del pase!` : `El ${c} la ha controlado con el muslo. Limpio.`,
+        hand ? `El ${c} la ha controlado con el muslo. Limpio.` : `¡El ${c} la ha bajado con la mano antes del pase!`, `No he visto bien el control del ${c}.`)],
+      varHint: ["SALA VAR", say(hand ? `Revisa el control del ${c}: posible mano.` : "Control legal. Gol limpio.",
+        hand ? "Control legal. Gol limpio." : `Revisa el control del ${c}: posible mano.`, "Si quieres revisar, es cosa tuya.")],
+      events: [[0.08, "Falta"], [0.31, "Control"], [0.52, "Pase"], [0.8, "Gol"]],
+      focus: atk + c, focusZ: 3.5,
+      wOpts: [
+        { label: `Mano del ${c} (amarilla)`, grade: hand ? "correct" : "wrong", fav: "def", mag: 12, cardTo: { t: atk, n: c, kind: "Y" } },
+        { label: NOTHING, grade: hand ? "wrong" : "partial", noFoul: true }
+      ],
+      endOpts: [
+        { label: "Gol válido", grade: hand ? "wrong" : "correct", fav: "atk", mag: 10, goal: true },
+        { label: `Anular: mano del ${c} (amarilla)`, grade: hand ? "correct" : "wrong", fav: "def", mag: 18, cardTo: { t: atk, n: c, kind: "Y" } }
+      ],
+      truth: hand ? `Anular: mano del ${c}` : "Gol válido",
+      why: hand ? `El ${c} se ayudó con la mano para controlar el balón antes de dar el pase del gol.` : `El ${c} controló con el muslo. Jugada legal.`,
+      ref: "Henry ante Irlanda, 2009: se ayudó con la mano antes de dar el gol que clasificó a Francia para el Mundial.",
+      ents: [
+        pl(atk, c, [[0, C.x - 12, C.y + side * 6], [0.3, C.x - 1.3, C.y + side * 0.4], [0.5, C.x - 0.8, C.y], [1, C.x + 1, C.y - side * 2]],
+          hand ? { reach: { t0: 0.26, t1: 0.31, t2: 0.4, hand: side > 0 ? "L" : "R", target: "ball", tc: 0.31 } } : {}),
+        pl(atk, f, [[0, 280, 100 - side * 6], [0.66, 297.2, 100 - side], [1, 300, 100 - side * 2]]),
+        pl(def, d1, [[0, C.x - 6, C.y + side * 10], [1, C.x - 2, C.y + side * 4]]),
+        pl(def, d2, [[0, 284, 100], [0.66, 294, 100 + side * 2], [1, 296, 100 + side]]),
+        gk(def, [[0, 300, 100 + side * 6], [0.6, 301, 100 + side * 9], [0.8, 301, 100 + side * 4]], { fall: 0.72, dive: true })
+      ],
+      ball: [[0, 250, 100 + side * 30], [0.08, 252, 100 + side * 29], [0.31, C.x - 0.6, C.y], [0.36, C.x + 0.2, C.y - side * 0.4], [0.5, C.x + 0.4, C.y - side * 0.9],
+        [0.66, 297.8, 100 - side * 0.6], [0.8, 308, 100 - side * 3], [1, 309, 100 - side * 3]],
+      ballZ: [[0, 0], [0.08, 0.5], [0.2, 11], [0.31, 3.2], [0.36, 1.2], [0.42, 0], [1, 0]]
+    };
+  }
+
+  // Rivaldo, 2002: con el balón parado, ¿le dan en la cara o hace teatro?
+  function genTheatre({ R, chance, atk, def, name, say, num }) {
+    const faked = chance(0.6);
+    const vic = num(atk, true), kk = num(def, true), o1 = num(atk), o2 = num(def);
+    const V = { x: R(200, 270), y: 186 }, K = { x: V.x - 7, y: 181 };
+    const u = nrm(K.x - V.x, K.y - V.y);
+    const hit = { x: V.x + u.x * 0.8, y: V.y + u.y * 0.8 }, hz = faked ? 2.4 : 8.6;
+    const opts = [
+      { label: `Amarilla a los dos: al ${vic} por simular y al ${kk} por chutarle`, grade: faked ? "correct" : "wrong", fav: null, mag: 0,
+        cardTo: [{ t: atk, n: vic, kind: "Y" }, { t: def, n: kk, kind: "Y" }] },
+      { label: `Roja al ${kk} por agresión`, grade: faked ? "wrong" : "correct", fav: "atk", mag: 10, cardTo: { t: def, n: kk, kind: "R" } },
+      { label: `Solo amarilla al ${kk}`, grade: "partial", fav: "atk", mag: 4, cardTo: { t: def, n: kk, kind: "Y" } },
+      { label: "Nada: saque de banda", grade: "wrong", fav: "def", mag: 6 }
+    ];
+    return {
+      title: "Balón parado junto a la banda", infraction: true, goalClip: true, question: "¿Qué decides?",
+      post: [["GRADA", "¡¡Fuera, fuera!! ¡Expulsión!"]],
+      hint: ["ASISTENTE", say(faked ? `Le ha dado en la pierna y se agarra la cara. Teatro del ${vic}.` : `¡Le ha reventado el balón en la cara al ${vic}!`,
+        faked ? `¡Le ha reventado el balón en la cara al ${vic}!` : `Le ha dado en la pierna y se agarra la cara. Teatro del ${vic}.`, "No sé dónde le ha dado.")],
+      varHint: ["SALA VAR", say(faked ? "Revisa dónde golpea el balón." : "Revisa: el balón le da en la cara.",
+        faked ? "Le da en la cara. Roja." : "El balón le da en la pierna.", "Es tu decisión.")],
+      events: [[0.3, "Chut"], [0.38, "Impacto"]],
+      focus: atk + vic, focusZ: faked ? 3 : 8,
+      wOpts: opts, endOpts: opts,
+      truth: faked ? "Amarilla a los dos" : `Roja al ${kk}`,
+      why: faked ? `El balón le dio al ${vic} en la pierna, pero se tiró llevándose las manos a la cara. El ${kk} le chutó a propósito.`
+        : `El ${kk} le lanzó el balón a la cara al ${vic} con el juego parado: conducta violenta.`,
+      ref: "Rivaldo ante Turquía, Corea-Japón 2002: el balón le dio en la pierna y se tiró llevándose las manos a la cara.",
+      ents: [
+        pl(atk, vic, [[0, V.x + 1, V.y + 1], [0.36, V.x, V.y], [1, V.x + 1.5, V.y + 1]], { face: [K.x, K.y], fall: 0.4, fallBack: true, clutch: 0.37 }),
+        pl(def, kk, [[0, K.x - 3, K.y - 1], [0.3, K.x, K.y], [1, K.x - 2, K.y - 2]], { kick: { t0: 0.22, t1: 0.3, t2: 0.4, h: 0.6, target: "ball", studs: false } }),
+        pl(atk, o1, [[0, V.x - 18, V.y - 22], [1, V.x - 10, V.y - 16]]),
+        pl(def, o2, [[0, V.x + 14, V.y - 18], [1, V.x + 8, V.y - 12]])
+      ],
+      ball: [[0, K.x + 1.2, K.y + 0.2], [0.3, K.x + 1.2, K.y + 0.3], [0.38, hit.x, hit.y], [0.6, hit.x - 5, hit.y - 3], [1, hit.x - 8, hit.y - 5]],
+      ballZ: [[0, 0], [0.3, 0], [0.38, hz], [0.6, 0], [1, 0]]
+    };
+  }
+
+  // Schumacher sobre Battiston, 1982: ¿salida brutal o limpia al balón?
+  function genKeeper({ R, chance, atk, def, say, pInf, num }) {
+    const brutal = chance(pInf);
+    const st = num(atk), d1 = num(def), d2 = num(def), a2 = num(atk);
+    const side = chance(0.5) ? 1 : -1, y0 = R(88, 112);
+    const A = { x: 285, y: y0 }, B = { x: 285.8, y: y0 };
+    const G = brutal ? { x: A.x + 4, y: A.y + side * 0.6 } : { x: B.x + 3.4, y: B.y };
+    return {
+      title: "Mano a mano con el portero", infraction: brutal, severe: brutal, goalClip: false,
+      hint: ["ASISTENTE", say(brutal ? "¡El portero se lo ha llevado por delante! ¡Ni ha tocado el balón!" : "El portero ha ido al balón. Limpio.",
+        brutal ? "El portero ha ido al balón. Limpio." : "¡El portero se lo ha llevado por delante! ¡Ni ha tocado el balón!", "Choque durísimo... no sé.")],
+      varHint: ["SALA VAR", say(brutal ? "Revisa la salida del portero: posible roja." : "El portero toca balón. Nada.",
+        brutal ? "El portero toca balón. Nada." : "Revisa la salida del portero: posible roja.", "Tú lo has visto de cerca.")],
+      events: [[0.45, "Remate"], [0.5, "Choque"]],
+      focus: atk + st, focusZ: 5,
+      wOpts: [
+        { label: "Penalti y roja al portero", grade: brutal ? "correct" : "wrong", fav: "atk", mag: 14, goal: true, cardTo: { t: def, n: 1, kind: "R" } },
+        { label: "Penalti y amarilla al portero", grade: brutal ? "partial" : "wrong", fav: "atk", mag: 10, goal: true, cardTo: { t: def, n: 1, kind: "Y" } },
+        { label: NOTHING, grade: brutal ? "wrong" : "partial", noFoul: true }
+      ],
+      noWhistle: { grade: brutal ? "wrong" : "correct" },
+      truth: brutal ? "Penalti y roja al portero" : "Dejar seguir",
+      why: brutal ? "El portero saltó con la cadera y la rodilla contra el delantero sin opción de tocar el balón." : "El portero se tiró a los pies y tocó el balón primero.",
+      ref: "Schumacher sobre Battiston, España 82: el portero se lo llevó por delante sin tocar el balón y el árbitro no pitó nada.",
+      ents: [
+        pl(atk, st, [[0, 262, y0 + side * 6], [0.45, A.x, A.y], ...(brutal ? [[0.52, A.x + 1.5, A.y], [1, A.x + 2.5, A.y]] : [[0.6, A.x + 7, A.y - side], [1, A.x + 10, A.y - side * 2]])],
+          brutal ? { fall: 0.51 } : { jump: { t0: 0.46, t1: 0.6, h: 1.4 } }),
+        gk(def, [[0, 298, 100], [0.3, 294, (100 + y0) / 2], [0.5, G.x, G.y], [0.62, G.x - 1, G.y], [1, G.x - 1.5, G.y]],
+          brutal ? { jump: { t0: 0.42, t1: 0.58, h: 1.3 }, kick: { t0: 0.42, t1: 0.5, t2: 0.6, h: 5.5, target: atk + st, studs: false } } : { slide: 0.4 }),
+        pl(def, d1, [[0, 255, y0 + side * 14], [1, 276, y0 + side * 8]]),
+        pl(def, d2, [[0, 250, y0 - side * 18], [1, 270, y0 - side * 14]]),
+        pl(atk, a2, [[0, 245, y0 - side * 26], [1, 266, y0 - side * 22]])
+      ],
+      ball: [[0, 264, y0 + side * 6], [0.45, B.x, B.y], ...(brutal ? [[0.75, 300, y0 + side * 14], [1, 306, y0 + side * 22]] : [[0.5, B.x + 0.4, B.y], [0.75, 291, B.y + side * 6], [1, 293, B.y + side * 8]])]
     };
   }
 
@@ -785,6 +1048,7 @@
     cancelAnimationFrame(view.bg);
     renderHud();
     clearTimeout(view.auto);
+    clearInterval(view.delib);
     const r = { menu: renderMenu, ficha: renderFicha, coldopen: renderColdOpen, incident: renderIncident, match: renderMatch,
       half: renderHalf, report: renderReport, epilogue: renderEpilogue }[state.screen] || renderMenu;
     r();
@@ -794,8 +1058,8 @@
   // ---------- Menú principal ----------
   const HOW = `
     <ul class="how">
-      <li>Cada jugada la ves <b>una sola vez</b>, en directo y con tus propios ojos: a pie de campo, con jugadores que te tapan. Mira bien.</li>
-      <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, cuatro cámaras, zoom y línea de fuera de juego. Tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
+      <li>El partido fluye: cada jugada la ves <b>una sola vez</b>, con tus propios ojos. Pulsa <b>¡PITAR!</b> (o la barra espaciadora) durante la jugada o en los <b>4 segundos</b> que tienes al terminar. Si no pitas, el juego sigue.</li>
+      <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, cinco cámaras (incluida la de la línea de gol), zoom y línea de fuera de juego. Tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
       <li>La sala VAR, tu asistente y la grada opinan. <b>No siempre tienen razón.</b></li>
       <li>Lee el <b>reglamento</b>: las circulares cambian las reglas.</li>
       <li>No sabrás si acertaste hasta el <b>informe del comité</b>, al final del partido.</li>
@@ -1041,6 +1305,7 @@
                 <button class="btn sm" data-cam="tribuna">Tribuna</button>
                 <button class="btn sm" data-cam="porteria">Portería</button>
                 <button class="btn sm" data-cam="contra">Contracampo</button>
+                <button class="btn sm" data-cam="linea">Línea de gol</button>
                 <button class="btn sm" data-cam="cenital">Cenital</button>
               </span>
             </div>
@@ -1234,8 +1499,9 @@
             <div class="tag" id="tag">${c.varOpen ? "VAR · REVISIÓN" : "● EN DIRECTO"}</div>
             <div class="tc" id="tc"></div>
             ${c.phase === "intro" ? `<button class="playover" id="playBtn">${state.idx === 0 ? "▶ Empezar el partido" : "▶ Minuto " + inc.minute + "'"}</button>` : ""}
+            <div class="ask" id="ask" hidden>¿PITAS?<b id="askN"></b></div>
           </div>
-          <button class="whistle" id="whistle" ${c.phase === "intro" || c.phase === "playing" ? "" : "disabled"}>¡PITAR! <small>barra espaciadora</small></button>
+          <button class="whistle" id="whistle" ${["intro", "playing", "deliberate"].includes(c.phase) ? "" : "disabled"}>¡PITAR! <small id="wsub">barra espaciadora</small></button>
           <div class="varbar" id="varbar" ${c.varOpen ? "" : "hidden"}>
             <div class="row">
               <button class="btn sm" id="fb" aria-label="Frame anterior">◀</button>
@@ -1251,6 +1517,7 @@
                 <button class="btn sm" data-cam="tribuna">Tribuna</button>
                 <button class="btn sm" data-cam="porteria">Portería</button>
                 <button class="btn sm" data-cam="contra">Contracampo</button>
+                <button class="btn sm" data-cam="linea">Línea de gol</button>
                 <button class="btn sm" data-cam="cenital">Cenital</button>
               </span>
             </div>
@@ -1277,6 +1544,7 @@
     view.t = c.whistled ? c.whistleT : c.phase === "intro" ? 0 : 1;
     if (c.varOpen) view.t = 0;
     draw();
+    if (c.phase === "deliberate") startDeliberation();
     // a partir de la segunda jugada el partido sigue solo
     if (c.phase === "intro" && state.idx > 0 && !c.autoStarted) {
       c.autoStarted = true;
@@ -1297,7 +1565,7 @@
 
   function optsList() {
     const inc = INCIDENTS[state.idx], c = state.cur;
-    return c.opts === "end" ? inc.endOpts : inc.wOpts;
+    return c.opts === "end" ? inc.endOpts : (inc.wOpts || inc.endOpts);
   }
 
   function renderMatchPanel() {
@@ -1307,6 +1575,9 @@
     const varBtn = !c.varOpen && state.varLeft > 0 ? `<button class="btn var" id="varBtn">Pedir VAR (quedan ${state.varLeft})</button>` : "";
     if (c.phase === "intro" || c.phase === "playing" || c.phase === "flow") {
       el.innerHTML = `<p class="hint">Observa. Si ves una infracción, pita. Si no, deja jugar.</p>`;
+    } else if (c.phase === "deliberate") {
+      el.innerHTML = `<p class="hint">¿Has visto algo? Tienes unos segundos para pitar.</p><button class="btn" id="letPlay">Dejar seguir →</button>`;
+      $("#letPlay").onclick = endDeliberation;
     } else if (c.phase === "varcall") {
       el.innerHTML = `
         <h3>La sala VAR te llama</h3>
@@ -1317,7 +1588,7 @@
       $("#keepPlay").onclick = () => { applyOutcome({ label: "Sin pitar", ...inc.noWhistle }, "Mantienes tu decisión. Sigue el juego."); };
     } else if (c.phase === "whistled" || c.phase === "goal") {
       el.innerHTML = `
-        <h3>${c.phase === "goal" ? "¿Vale el gol?" : "¿Qué pitas?"}</h3>
+        <h3>${c.phase === "goal" ? (inc.question || "¿Vale el gol?") : "¿Qué pitas?"}</h3>
         ${optsList().map((o, i) => `<button class="btn opt" data-opt="${i}"><span class="card ${o.cardTo ? (o.cardTo.kind === "R" ? "r" : "y") : o.goal ? "g" : "w"}"></span>${esc(o.label)}</button>`).join("")}
         ${varBtn}`;
       el.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => applyOutcome(optsList()[+b.dataset.opt]));
@@ -1350,9 +1621,10 @@
 
   function whistle() {
     const c = state.cur, inc = INCIDENTS[state.idx];
-    if (c.phase !== "playing") return;
+    if (c.phase !== "playing" && c.phase !== "deliberate") return;
     cancelAnimationFrame(view.anim);
-    c.phase = "whistled"; c.whistled = true; c.whistleT = view.t; c.opts = "w";
+    stopDeliberation();
+    c.phase = "whistled"; c.whistled = true; c.whistleT = view.t; c.opts = inc.wOpts ? "w" : "end";
     $("#whistle").disabled = true;
     say("TÚ", "¡Piiiii! Paras el juego.");
     say(...inc.hint);
@@ -1365,11 +1637,44 @@
     $("#whistle").disabled = true;
     if (inc.goalClip) {
       c.phase = "goal"; c.opts = "end";
-      inc.post.forEach(m => say(...m));
+      (inc.post || []).forEach(m => say(...m));
       say(...inc.hint); say(...inc.varHint);
       renderMatchPanel();
       return;
     }
+    startDeliberation();
+  }
+
+  // Tras la jugada, unos segundos para decidir si pitas
+  const DELIB_MS = 4000;
+  function startDeliberation() {
+    const c = state.cur;
+    c.phase = "deliberate";
+    stopDeliberation();
+    const end = performance.now() + DELIB_MS;
+    const w = $("#whistle"), ask = $("#ask");
+    w.disabled = false; w.classList.add("hot");
+    ask.hidden = false;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
+      $("#askN").textContent = left; $("#wsub").textContent = `quedan ${left} s`;
+      if (left <= 0) endDeliberation();
+    };
+    tick();
+    view.delib = setInterval(tick, 200);
+    renderMatchPanel();
+  }
+  function stopDeliberation() {
+    clearInterval(view.delib);
+    const w = $("#whistle"), ask = $("#ask");
+    if (w) { w.classList.remove("hot"); $("#wsub").textContent = "barra espaciadora"; }
+    if (ask) ask.hidden = true;
+  }
+  function endDeliberation() {
+    const c = state.cur, inc = INCIDENTS[state.idx];
+    if (c.phase !== "deliberate") return;
+    stopDeliberation();
+    $("#whistle").disabled = true;
     // Si se te escapa algo, a veces la sala VAR te avisa (y a veces se equivoca)
     if (Math.random() < (inc.infraction ? (inc.severe ? 0.55 : 0.35) : 0.07)) {
       c.phase = "varcall";
@@ -1400,7 +1705,7 @@
     const c = state.cur, inc = INCIDENTS[state.idx], tm = teamsOf(state);
     stopSlow();
     const grade = o.noFoul && !c.whistled && inc.noWhistle ? inc.noWhistle.grade : o.grade;
-    state.decisions.push({ minute: inc.minute, title: inc.title, label: o.label, grade, truth: inc.truth, why: inc.why, whistled: c.whistled });
+    state.decisions.push({ minute: inc.minute, title: inc.title, label: o.label, grade, truth: inc.truth, why: inc.why, ref: inc.ref || null, whistled: c.whistled });
     // comité
     bump("comite", grade === "correct" ? 7 : grade === "partial" ? 1 : -12);
     // aficiones: quien sale favorecido se calma, el otro se enfada
@@ -1415,10 +1720,10 @@
     if (grade === "correct") bump("temp", o.cardTo ? -12 : inc.infraction ? -5 : 0);
     if (c.whistled && !inc.infraction) bump("temp", 3);
     // tarjetas
-    if (o.cardTo) {
-      const id = o.cardTo.t + o.cardTo.n, had = state.cards[id] || 0;
-      if (o.cardTo.kind === "R") { state.cards[id] = 2; say("TÚ", `Roja al ${o.cardTo.n} del ${tm[o.cardTo.t][2]}. A la calle.`); }
-      else if (had === 1) { state.cards[id] = 2; say("TÚ", `Segunda amarilla al ${o.cardTo.n}: expulsado.`); }
+    for (const ct of [].concat(o.cardTo || [])) {
+      const id = ct.t + ct.n, had = state.cards[id] || 0, who = ct.n === 1 ? "portero" : ct.n;
+      if (ct.kind === "R") { state.cards[id] = 2; say("TÚ", `Roja al ${who} del ${tm[ct.t][2]}. A la calle.`); }
+      else if (had === 1) { state.cards[id] = 2; say("TÚ", `Segunda amarilla al ${who} del ${tm[ct.t][2]}: expulsado.`); }
       else { state.cards[id] = 1; }
     }
     if (o.goal) {
@@ -1494,7 +1799,7 @@
                   <td class="num">${r.minute}'</td>
                   <td>${esc(r.title)}</td>
                   <td>${esc(r.label)}</td>
-                  <td>${esc(r.truth)}<div class="why">${esc(r.why)}</div></td>
+                  <td>${esc(r.truth)}<div class="why">${esc(r.why)}</div>${r.ref ? `<div class="caso">Caso real: ${esc(r.ref)}</div>` : ""}</td>
                   <td class="res ${r.grade}">${gradeTxt[r.grade]}</td>
                 </tr>`).join("")}
             </tbody>
@@ -1626,9 +1931,9 @@
 
   // ---------- Dibujo ----------
   // Mundo: x a lo largo del campo (portería en x=304), y a lo ancho, z altura. 1 unidad ≈ 18 cm.
-  const CAMS = { ojos: "TU VISTA", tribuna: "CAM 1 · TRIBUNA", porteria: "CAM 2 · PORTERÍA", contra: "CAM 3 · CONTRACAMPO", cenital: "CAM 4 · CENITAL" };
+  const CAMS = { ojos: "TU VISTA", tribuna: "CAM 1 · TRIBUNA", porteria: "CAM 2 · PORTERÍA", contra: "CAM 3 · CONTRACAMPO", linea: "CAM 5 · LÍNEA DE GOL", cenital: "CAM 4 · CENITAL" };
 
-  const focusPos = (inc, t) => at(inc.ents.find(e => e.id === inc.focus).k, t);
+  const focusPos = (inc, t) => inc.focus === "ball" ? ballPos(inc, t) : at(inc.ents.find(e => e.id === inc.focus).k, t);
   const ballPos = (inc, t) => { const b = at(inc.ball, t); return { x: b.x, y: b.y, z: inc.ballZ ? at(inc.ballZ, t).x : 0 }; };
   const dorsal = e => e.gk ? "1" : e.id.replace(/\D/g, "");
   const teamColor = e => e.gk ? KIT[e.t].gk : KIT[e.t].shirt;
@@ -1957,6 +2262,7 @@
       tgt = [b.x, b.y, 3]; f = 330;
     } else if (kind === "tribuna") { pos = [fe.x, 300, 85]; tgt = [fe.x, fe.y, 2]; f = 720; }
     else if (kind === "porteria") { pos = [352, 100 + (fe.y - 100) * 0.4, 28]; tgt = [fe.x, fe.y, 4]; f = 520; }
+    else if (kind === "linea") { pos = [304, -40, 7]; tgt = [304, clamp(fe.y, 60, 140), 4]; f = 700; if (zoom) { f *= 3.5; tgt = [304, fe.y, inc.focusZ ?? 4]; } return makeCam(pos, tgt, f * LW / 480); }
     else { pos = [fe.x, -100, 85]; tgt = [fe.x, fe.y, 2]; f = 720; }
     if (zoom) { f *= 3.5; tgt = [fe.x, fe.y, inc.focusZ ?? 4]; }
     return makeCam(pos, tgt, f * LW / 480);
@@ -2021,6 +2327,32 @@
     let bend = running ? 0.6 : 0.2;
     if (e.arms === "tucked") { P.handL = [0.3, 0.98, 5.7]; P.handR = [0.3, -0.98, 5.7]; }
     if (e.arms === "open") { P.handL = [0.2, 2.5, 7.6]; P.handR = [0.2, -2.5, 7.6]; }
+    const jl = jumpLift(e, t);
+    // alcanzar el balón (o un punto) con una mano o con las dos
+    if (e.reach) {
+      const Rc = e.reach, m = t < Rc.t0 ? 0 : t < Rc.t1 ? (t - Rc.t0) / (Rc.t1 - Rc.t0) : t < Rc.t2 ? 1 : clamp(1 - (t - Rc.t2) / 0.1, 0, 1);
+      if (m > 0) {
+        let tx, ty, tz;
+        if (Rc.target === "ball") { const b = ballPos(inc, Rc.tc ?? Math.min(t, Rc.t1)); tx = b.x; ty = b.y; tz = b.z + 0.65; }
+        else [tx, ty, tz] = Rc.target;
+        const dx = tx - p.x, dy = ty - p.y, a = dx * u.x + dy * u.y, b = dx * v.x + dy * v.y, z = tz - jl;
+        const hs = Rc.hand === "both" ? [["handL", 0.45], ["handR", -0.45]] : [["hand" + Rc.hand, 0]];
+        for (const [h, off] of hs) P[h] = mix(P[h], [a - 0.35, b + off, z], m);
+      }
+    }
+    // brazos arriba para tapar (mano en la línea)
+    if (e.block !== undefined && t >= e.block) { P.handL = [0.6, 0.85, 9.8]; P.handR = [0.6, -0.85, 9.8]; }
+    // manos a la cara
+    if (e.clutch !== undefined && t >= e.clutch) { P.handL = [0.45, 0.35, 9.3]; P.handR = [0.45, -0.35, 9.3]; }
+    // cabezazo al pecho del rival
+    if (e.butt) {
+      const E = e.butt, m = t < E.t0 ? 0 : t < E.t1 ? (t - E.t0) / (E.t1 - E.t0) : clamp(1 - (t - E.t1) / 0.1, 0, 1);
+      if (m > 0) {
+        const tp = at(inc.ents.find(x => x.id === E.target).k, Math.min(t, E.t1));
+        const dx = tp.x - p.x, dy = tp.y - p.y, a = dx * u.x + dy * u.y, b = dx * v.x + dy * v.y;
+        P.neck = mix(P.neck, [a * 0.3, b * 0.3, 8.1], m); P.head = mix(P.head, [a * 0.55, b * 0.55, 8.2], m); P.pelvis = mix(P.pelvis, [-0.4, 0, 5], m);
+      }
+    }
     if (e.elbow) {
       const E = e.elbow, m = t < E.t0 ? 0 : t < E.t1 ? (t - E.t0) / (E.t1 - E.t0) : clamp(1 - (t - E.t1) / 0.08, 0, 1);
       if (m > 0) {
@@ -2062,15 +2394,22 @@
     return P;
   }
 
+  // Altura del salto en cada momento
+  function jumpLift(e, t) {
+    const J = e.jump;
+    return !J || t <= J.t0 || t >= J.t1 ? 0 : J.h * Math.sin(Math.PI * (t - J.t0) / (J.t1 - J.t0));
+  }
+
   // Cuerpo en coordenadas del mundo (sirve para dibujar el sprite y sus sombras)
   function bodyWorld(e, inc, t) {
     const p = at(e.k, t), F = facing(e, inc, t), u = F.u, v = { x: -u.y, y: u.x };
     const P = bodyLocal(e, inc, t, F.sp, p, u, v);
-    const th = e.fall !== undefined && t > e.fall ? clamp((t - e.fall) / 0.12, 0, 1) * 1.42 : 0;
+    const th = (e.fall !== undefined && t > e.fall ? clamp((t - e.fall) / 0.12, 0, 1) * 1.42 : 0) * (e.fallBack ? -1 : 1);
+    const lift = jumpLift(e, t);
     const W3 = q => {
       let [a, b, z] = q;
       if (th) { const a2 = a * Math.cos(th) + z * Math.sin(th); z = Math.max(0.2, z * Math.cos(th) - a * Math.sin(th)); a = a2; }
-      return [p.x + a * u.x + b * v.x, p.y + a * u.y + b * v.y, z];
+      return [p.x + a * u.x + b * v.x, p.y + a * u.y + b * v.y, z + lift];
     };
     const pts = {};
     for (const k in P) if (Array.isArray(P[k])) pts[k] = W3(P[k]);
@@ -2223,7 +2562,7 @@
   document.addEventListener("keydown", e => {
     if (e.code !== "Space" || state.screen !== "match" || /INPUT|BUTTON|SELECT/.test(document.activeElement?.tagName || "")) return;
     e.preventDefault();
-    if (state.cur.phase === "playing") whistle();
+    if (state.cur.phase === "playing" || state.cur.phase === "deliberate") whistle();
     else if (state.cur.phase === "intro") playClip();
   });
 
