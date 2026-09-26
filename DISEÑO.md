@@ -108,25 +108,38 @@ Menú principal, licencia de árbitro (nombre y ciudad), y el prólogo: final de
 Circulares de la final: máximo 3 revisiones VAR; la mano solo es penalti con el brazo
 separado del cuerpo.
 
-## 10. Partido rápido (prototipo v0.3)
-Mientras se pule el bucle, la historia queda aparcada (el código de la licencia, el prólogo y
-el epílogo sigue en el archivo). El menú ofrece **Partido rápido**: 5 jugadas al azar, una de
-cada tipo, en orden y minutos aleatorios, con equipos inventados al azar.
+## 10. Partido rápido (prototipo v0.4)
+La historia queda aparcada mientras se pule el bucle (el código de la licencia, el prólogo y el
+epílogo sigue en el archivo). El árbitro **solo observa y decide**: no se controla su posición.
 
-| Tipo | Variantes (cambian la decisión correcta) |
-|---|---|
-| Pase al hueco | Fuera de juego o habilitado, por 15 a 60 cm |
-| Entrada en el área | Penalti (se lleva las piernas) o piscinazo (toca balón, sin contacto) |
-| Centro al área | Brazo pegado (no es penalti) o separado (penalti) |
-| Entrada en el medio campo | Limpia, imprudente (amarilla) o con tacos (roja) |
-| Disparo desde fuera | Empujón previo del 9 (anular) o limpio (gol) |
+**El partido fluye**: 8 jugadas encadenadas. Muchas son juego limpio; el reto es saber cuándo
+pitar y cuándo dejar jugar (como en *Papers, Please*: la mayoría de pasaportes están bien).
+- Botón **¡PITAR!** (o barra espaciadora) en cualquier momento de la jugada. Al pitar, eliges
+  qué pitas, o "no había nada" si te equivocaste (cortar el juego sin motivo penaliza).
+- Si no pitas, el juego sigue. En los goles, decides al final si valen.
+- Si se te escapa una infracción, a veces la sala VAR te llama (y a veces es falsa alarma).
+- Jugadas: pase al hueco (fuera de juego o no), entrada en el área (penalti, piscinazo o
+  limpia), centro al área (mano con brazo separado o pegado), entrada en el medio campo
+  (limpia, amarilla o roja), disparo con jugada previa (empujón o limpio), **lejos del balón**
+  (codazo o forcejeo) y juego sin incidencias.
 
-- Posiciones, lado del campo y equipo atacante al azar: si ataca el visitante, la grada
-  reacciona al revés.
-- El asistente y la sala VAR aciertan (~55 %), se equivocan (~25 %) o no se mojan (~20 %).
-- Cada partido sale de una semilla, así la partida guardada se reconstruye igual.
+**Cuatro barras** (a lo *Reigns*): confianza del comité, enfado de la grada local, enfado de
+los visitantes y temperatura de los jugadores. Si una llega al límite, el partido se suspende:
+invasión de campo, retirada del visitante, tángana o te relevan.
+- Cuanto más caliente el partido, más infracciones y más duras.
+- Dejar pasar infracciones calienta a los jugadores; las tarjetas justas los enfrían.
+
+**Tarjetas acumuladas**: hay que recordar quién tiene amarilla; la segunda es expulsión. Los
+amonestados tienden a reincidir. Los expulsados no vuelven a aparecer.
+
+Cada jugada sale de la semilla del partido y de su estado (temperatura y tarjetas).
 
 ## 11. Próximos pasos (ideas)
+- [ ] Hablar con los jugadores: preguntar tras una caída (pueden mentir), calmar o amonestar
+  protestas (idea 4).
+- [ ] Progresión entre partidos: circulares nuevas, reputación, mejoras (asistente, VAR extra),
+  empezar sin VAR (idea 5).
+- [ ] Ley de la ventaja.
 - [ ] Primer partido de 1994 (sin VAR) en tercera división.
 - [ ] Consecuencias del sobre del prólogo a lo largo de la carrera.
 - [ ] Más tipos de jugada: agresiones fuera del balón, protestas, pérdidas de tiempo.
