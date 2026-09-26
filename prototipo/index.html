@@ -989,7 +989,7 @@
 
   // ----- 3D: cámaras de televisión y tu vista -----
   // Estilo 16 bits: todo se dibuja a 320x200, píxel a píxel, y se amplía x2 sin suavizar.
-  const LW = 320, LH = 200;
+  const LW = 160, LH = 100;
   const V = {
     sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
     dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
@@ -1011,6 +1011,36 @@
   }
   const mkBuf = () => { const b = document.createElement("canvas"); b.width = LW; b.height = LH; return b; };
   const LBUF = mkBuf(), SBUF = mkBuf();
+  const LCTX = LBUF.getContext("2d", { willReadFrequently: true });
+
+  // Paleta fija de 32 colores y tramado ordenado (Bayer 4x4), como en una consola de 16 bits
+  const PALETTE = ["#0b0e12", "#1a1f27", "#2a323d", "#3d4854", "#5d6b78", "#8a98a4", "#c8d0d6", "#f4f4ee",
+    "#16301e", "#1f4428", "#2a5c35", "#377444", "#4f9150", "#2b5f8a", "#3f86b8", "#7cc4f0",
+    "#b8e2f8", "#6e2a1c", "#b8452b", "#f07a5a", "#f6b39a", "#5a3a24", "#a8744e", "#d9a77e",
+    "#f0cfa6", "#35241a", "#8a6a14", "#d8a21c", "#f2d65c", "#4a2f6e", "#8e68c4", "#1f4e8c"].map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const LUT = new Uint8Array(32768).fill(255);
+  function nearestColor(r, g, b) {
+    let best = 0, bd = Infinity;
+    PALETTE.forEach(([pr, pg, pb], i) => { const d = 2 * (r - pr) ** 2 + 4 * (g - pg) ** 2 + 3 * (b - pb) ** 2; if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  const EXACT = new Map(PALETTE.map(([r, g, b], i) => [r << 16 | g << 8 | b, i]));
+  function quantize(g) {
+    const img = g.getImageData(0, 0, LW, LH), d = img.data;
+    for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) {
+      const i = (y * LW + x) * 4;
+      if (EXACT.has(d[i] << 16 | d[i + 1] << 8 | d[i + 2])) { d[i + 3] = 255; continue; }
+      const th = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.47) * 30;
+      const r = clamp(d[i] + th, 0, 255) | 0, gg = clamp(d[i + 1] + th, 0, 255) | 0, b = clamp(d[i + 2] + th, 0, 255) | 0;
+      const key = (r >> 3) << 10 | (gg >> 3) << 5 | (b >> 3);
+      let k = LUT[key];
+      if (k === 255) k = LUT[key] = nearestColor(r | 4, gg | 4, b | 4);
+      const c = PALETTE[k];
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  }
 
   // --- Primitivas de píxel (sin antialias) ---
   function clipSeg(x0, y0, x1, y1) {
@@ -1088,7 +1118,7 @@
   function pxNumber(g, str, cx, y, col) {
     const w = str.length * 4 - 1;
     let x = Math.round(cx - w / 2); y = Math.round(y);
-    g.fillStyle = "#0b0f0c"; g.fillRect(x - 1, y - 1, w + 2, 7);
+    g.fillStyle = "#0b0e12"; g.fillRect(x - 1, y - 1, w + 2, 7);
     g.fillStyle = col;
     for (const ch of str) {
       const m = DIGITS[ch];
@@ -1114,8 +1144,8 @@
     return patterns[key];
   }
   const crowdPat = g => pattern(g, "crowd", 32, x => {
-    x.fillStyle = "#10161d"; x.fillRect(0, 0, 32, 32);
-    const r = seeded(9), cols = ["#2a3f52", "#3b5268", "#7cc4f0", "#5aa0cc", "#6a3f33", "#8a5a44", "#c9c2b4", "#1e2833"];
+    x.fillStyle = "#0b0e12"; x.fillRect(0, 0, 32, 32);
+    const r = seeded(9), cols = ["#2a323d", "#3d4854", "#7cc4f0", "#3f86b8", "#6e2a1c", "#b8452b", "#c8d0d6", "#1a1f27"];
     for (let y = 0; y < 32; y += 2) for (let xx = (y / 2) % 2; xx < 32; xx += 2) { x.fillStyle = cols[(r() * cols.length) | 0]; x.fillRect(xx, y, 1, 1); }
   });
   const grassPat = g => pattern(g, "grass", 8, x => {
@@ -1129,8 +1159,8 @@
     sky.addColorStop(0, "#05080c"); sky.addColorStop(1, "#141d27");
     g.fillStyle = sky; g.fillRect(0, 0, LW, LH);
     // césped (campo completo, con la otra mitad) y franjas de corte
-    poly3(g, c, [[-312, -12, 0], [332, -12, 0], [332, 212, 0], [-312, 212, 0]], "#2d6a3c");
-    for (let x = -312, i = 0; x < 332; x += 21.5, i++) if (i % 2) poly3(g, c, [[x, -12, 0], [x + 21.5, -12, 0], [x + 21.5, 212, 0], [x, 212, 0]], "#367a46");
+    poly3(g, c, [[-312, -12, 0], [332, -12, 0], [332, 212, 0], [-312, 212, 0]], "#2a5c35");
+    for (let x = -312, i = 0; x < 332; x += 21.5, i++) if (i % 2) poly3(g, c, [[x, -12, 0], [x + 21.5, -12, 0], [x + 21.5, 212, 0], [x, 212, 0]], "#377444");
     poly3(g, c, [[-312, -12, 0], [332, -12, 0], [332, 212, 0], [-312, 212, 0]], grassPat(g));
     // gradas en los lados que la cámara tiene delante (las de detrás no se ven)
     const sides = [];
@@ -1145,11 +1175,11 @@
       const f = P[k], step = (a1 - a0) / 8;
       for (let i = 0; i < 8; i++) {
         const a = a0 + i * step, b = a + step;
-        poly3(g, c, [f(a, 0, 0), f(b, 0, 0), f(b, 0, 5), f(a, 0, 5)], "#1b232c");              // muro
+        poly3(g, c, [f(a, 0, 0), f(b, 0, 0), f(b, 0, 5), f(a, 0, 5)], "#1a1f27");              // muro
         poly3(g, c, [f(a, 1, 5), f(b, 1, 5), f(b, 66, 44), f(a, 66, 44)], crowd);                // grada
-        poly3(g, c, [f(a, 66, 44), f(b, 66, 44), f(b, 66, 58), f(a, 66, 58)], "#0b1016");        // fondo
-        poly3(g, c, [f(a, 26, 58), f(b, 26, 58), f(b, 76, 64), f(a, 76, 64)], "#1a212a");        // techo
-        poly3(g, c, [f(a, 26, 55), f(b, 26, 55), f(b, 26, 58), f(a, 26, 58)], "#2c3642");        // borde del techo
+        poly3(g, c, [f(a, 66, 44), f(b, 66, 44), f(b, 66, 58), f(a, 66, 58)], "#0b0e12");        // fondo
+        poly3(g, c, [f(a, 26, 58), f(b, 26, 58), f(b, 76, 64), f(a, 76, 64)], "#1a1f27");        // techo
+        poly3(g, c, [f(a, 26, 55), f(b, 26, 55), f(b, 26, 58), f(a, 26, 58)], "#2a323d");        // borde del techo
       }
       for (let i = 0; i < 20; i++) {
         const a = a0 + i * (a1 - a0) / 20, b = a + (a1 - a0) / 20;
@@ -1158,19 +1188,19 @@
     }
     // torres de focos
     for (const T of TOWERS) {
-      seg3(g, c, [T[0], T[1], 0], T, 1, "#1d252e");
+      seg3(g, c, [T[0], T[1], 0], T, 1, "#1a1f27");
       const q = proj(c, T);
       if (!q) continue;
       g.globalCompositeOperation = "lighter";
-      pxDisc(g, q.x, q.y, 9, "rgba(255,236,190,.05)");
-      pxDisc(g, q.x, q.y, 5, "rgba(255,236,190,.10)");
+      pxDisc(g, q.x, q.y, 5, "rgba(255,236,190,.08)");
+      pxDisc(g, q.x, q.y, 3, "rgba(255,236,190,.14)");
       g.globalCompositeOperation = "source-over";
-      g.fillStyle = "#fff6dc"; g.fillRect(Math.round(q.x) - 2, Math.round(q.y) - 1, 5, 2);
+      g.fillStyle = "#f4f4ee"; g.fillRect(Math.round(q.x) - 1, Math.round(q.y), 3, 1);
     }
   }
 
   function drawMarkings(g, c, inc, t, line) {
-    const COLL = "#e6eee2";
+    const COLL = "#c8d0d6";
     const L = pts => { for (let i = 0; i < pts.length - 1; i++) seg3(g, c, [pts[i][0], pts[i][1], 0.05], [pts[i + 1][0], pts[i + 1][1], 0.05], 1, COLL); };
     const both = pts => { L(pts); L(pts.map(([x, y]) => [20 - x, y])); }; // la otra mitad es simétrica respecto a x=10
     L([[-284, 6], [304, 6], [304, 194], [-284, 194], [-284, 6]]);
@@ -1181,7 +1211,7 @@
     for (let i = 0; i <= 12; i++) { const a = a0 + (2 * Math.PI - 2 * a0) * i / 12; arc.push([272 + 24 * Math.cos(a), 100 + 24 * Math.sin(a)]); }
     for (let i = 0; i <= 32; i++) { const a = 2 * Math.PI * i / 32; cc.push([10 + 22 * Math.cos(a), 100 + 22 * Math.sin(a)]); }
     both(arc); L(cc); both([[271.5, 100], [272.5, 100]]);
-    if (line) seg3(g, c, [offsideX(inc, t), 6, 0.1], [offsideX(inc, t), 194, 0.1], 1, COL.amber);
+    if (line) seg3(g, c, [offsideX(inc, t), 6, 0.1], [offsideX(inc, t), 194, 0.1], 1, "#f2d65c");
   }
 
   function drawGoal3(g, c, m) {
@@ -1192,7 +1222,7 @@
     for (const y of [90, 110]) for (let x = 304; x <= 311; x += 2.3) seg3(g, c, [X(x), y, 0], [X(x), y, 14 - (x - 304) * 3 / 7], 1, NET);
     const q = proj(c, [X(304), 100, 7]), w = q ? Math.max(1, Math.round(0.3 * q.s)) : 1;
     for (const [a, b] of [[[304, 90, 0], [304, 90, 14]], [[304, 110, 0], [304, 110, 14]], [[304, 90, 14], [304, 110, 14]]]) {
-      seg3(g, c, [X(a[0]), a[1], a[2]], [X(b[0]), b[1], b[2]], w, "#f4f4f0");
+      seg3(g, c, [X(a[0]), a[1], a[2]], [X(b[0]), b[1], b[2]], w, "#f4f4ee");
     }
   }
 
@@ -1204,15 +1234,15 @@
       const lb = ballPos(inc, Math.max(0, t - 0.15));
       pos = [clamp(lb.x - 40, 14, 262), clamp(lb.y + 24, 12, 188), 10];
       tgt = [b.x, b.y, 3]; f = 330;
-    } else if (kind === "tribuna") { pos = [fe.x, 300, 85]; tgt = [fe.x, fe.y, 2]; f = 600; }
+    } else if (kind === "tribuna") { pos = [fe.x, 300, 85]; tgt = [fe.x, fe.y, 2]; f = 720; }
     else if (kind === "porteria") { pos = [352, 100 + (fe.y - 100) * 0.4, 28]; tgt = [fe.x, fe.y, 4]; f = 520; }
-    else { pos = [fe.x, -100, 85]; tgt = [fe.x, fe.y, 2]; f = 600; }
+    else { pos = [fe.x, -100, 85]; tgt = [fe.x, fe.y, 2]; f = 720; }
     if (zoom) { f *= 3.5; tgt = [fe.x, fe.y, inc.focusZ ?? 4]; }
     return makeCam(pos, tgt, f * LW / 480);
   }
 
   function draw3D(ctx, inc, t, kind, zoom, line, labels) {
-    const g = LBUF.getContext("2d");
+    const g = LCTX;
     const c = cameraFor(kind, inc, t, zoom);
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
@@ -1235,6 +1265,7 @@
     const vg = g.createRadialGradient(LW / 2, LH / 2, LH * 0.45, LW / 2, LH / 2, LW * 0.72);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
     g.fillStyle = vg; g.fillRect(0, 0, LW, LH);
+    quantize(g);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(LBUF, 0, 0, CW, CH);
@@ -1353,15 +1384,23 @@
   function drawBall3(g, c, b) {
     const q = proj(c, [b.x, b.y, b.z + 0.65]);
     if (!q) return;
-    const r = Math.max(1, Math.round(0.65 * q.s)), x = Math.round(q.x), y = Math.round(q.y);
-    pxDisc(g, x, y, r + 1, "#0b0f0c");
-    pxDisc(g, x, y, r, "#e9ecef");
-    if (r >= 2) { pxDisc(g, x - 1, y - 1, r - 1, "#ffffff"); g.fillStyle = "#9aa3ab"; g.fillRect(x + r - 1, y, 1, r); }
+    const r = Math.round(0.65 * q.s), x = Math.round(q.x), y = Math.round(q.y);
+    if (r < 1) { g.fillStyle = "#0b0e12"; g.fillRect(x, y + 1, 1, 1); g.fillStyle = "#f4f4ee"; g.fillRect(x, y, 1, 1); return; }
+    pxDisc(g, x, y, r + 1, "#0b0e12");
+    pxDisc(g, x, y, r, "#c8d0d6");
+    if (r >= 2) { pxDisc(g, x - 1, y - 1, r - 1, "#f4f4ee"); g.fillStyle = "#8a98a4"; g.fillRect(x + r - 1, y, 1, r); }
   }
 
   // Kits: [camiseta, pantalón, medias]
-  const KITS = { N: ["#7cc4f0", "#eef1f3", "#7cc4f0"], S: ["#f07a5a", "#2a2d33", "#f07a5a"] };
-  const SKIN = "#d9a77e", HAIR = "#35241a", BOOT = "#141414";
+  const KITS = { N: ["#7cc4f0", "#c8d0d6", "#7cc4f0"], S: ["#f07a5a", "#2a323d", "#f07a5a"] };
+  const SKIN = "#d9a77e", HAIR = "#35241a", BOOT = "#0b0e12";
+  // Rampas de la paleta de 32 colores: [luz, base, sombra]
+  const RAMPS = {
+    "#7cc4f0": ["#b8e2f8", "#7cc4f0", "#3f86b8"], "#f07a5a": ["#f6b39a", "#f07a5a", "#b8452b"],
+    "#c8d0d6": ["#f4f4ee", "#c8d0d6", "#8a98a4"], "#2a323d": ["#3d4854", "#2a323d", "#1a1f27"],
+    "#d9a77e": ["#f0cfa6", "#d9a77e", "#a8744e"], "#35241a": ["#5a3a24", "#35241a", "#35241a"],
+    "#f2d65c": ["#f2d65c", "#d8a21c", "#8a6a14"], "#b98ee8": ["#8e68c4", "#8e68c4", "#4a2f6e"]
+  };
   function drawPlayer3(g, c, B, labels) {
     const { e, p, u, v, pts } = B;
     const mid = proj(c, [p.x, p.y, 5]);
@@ -1370,11 +1409,11 @@
     for (const k in pts) Q[k] = proj(c, pts[k]);
     const s = mid.s, px = m => Math.max(1, Math.round(m * s));
     const fog = clamp((mid.d - 150) / 700, 0, 0.5);
-    const [shirt, shorts, socks] = e.gk ? [teamColor(e), "#2a2d33", teamColor(e)] : KITS[e.t];
+    const [shirt, shorts, socks] = e.gk ? [teamColor(e), "#2a323d", teamColor(e)] : KITS[e.t];
     // luz principal: la torre más cercana
     const T = TOWERS.reduce((a, b) => Math.hypot(b[0] - p.x, b[1] - p.y) < Math.hypot(a[0] - p.x, a[1] - p.y) ? b : a);
     const lx = T[0] - p.x, ly = T[1] - p.y, litL = (v.x * lx + v.y * ly) > 0; // ¿el lado izquierdo (L) mira a la luz?
-    const col = (h, lit) => tone(h, lit === undefined ? 0.92 : lit ? 1.12 : 0.66, fog);
+    const col = (h, lit) => RAMPS[h] ? RAMPS[h][lit === undefined ? 1 : lit ? 0 : 2] : tone(h, 1, fog);
     const side = k => k.endsWith("L") ? litL : !litL;
 
     // formas: [tipo, puntos, grosor, color base, lado]
@@ -1403,11 +1442,12 @@
         const w = px(0.95);
         g.fillStyle = mono || BOOT; g.fillRect(Math.round(Q[f].x) - (w >> 1) + dx, Math.round(Q[f].y) - 1 + dy, w + 1, Math.max(2, px(0.45)));
       }
-      if (Q.head) pxDisc(g, Q.head.x + dx, Q.head.y + dy, Math.max(1, Math.round(0.62 * s)), mono || col(SKIN, true));
+      if (Q.head) pxDisc(g, Q.head.x + dx, Q.head.y + dy, Math.max(0, Math.round(0.62 * s)), mono || col(SKIN, true));
     };
     // contorno oscuro de 1 píxel, como los sprites de la época
-    const OUT = tone("#0d120e", 1, fog * 0.5);
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) paint(OUT, dx, dy);
+    const OUT = "#0b0e12";
+    // a lo lejos el sprite es tan pequeño que el contorno lo taparía todo
+    if (s >= 1.1) for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) paint(OUT, dx, dy);
     paint(null, 0, 0);
     // brillo en el borde iluminado del torso
     if (s > 1.2 && Q.shL && Q.waistL && Q.shR && Q.waistR) {
@@ -1416,21 +1456,21 @@
     }
     if (B.studs) {
       const a = proj(c, B.studs[0]), b = proj(c, B.studs[1]);
-      if (a && b) pxLine(g, a.x, a.y, b.x, b.y, Math.max(1, px(0.2)), "#f4f4f4");
+      if (a && b) pxLine(g, a.x, a.y, b.x, b.y, Math.max(1, px(0.2)), "#f4f4ee");
     }
     // cabeza: pelo, cara en sombra y nuca si está de espaldas
     if (Q.head) {
-      const r = Math.max(1, Math.round(0.62 * s)), hx = Math.round(Q.head.x), hy = Math.round(Q.head.y);
+      const r = Math.max(0, Math.round(0.62 * s)), hx = Math.round(Q.head.x), hy = Math.round(Q.head.y);
       const away = u.x * c.fw[0] + u.y * c.fw[1] > 0.3;
       g.fillStyle = col(HAIR, true);
       if (away) pxDisc(g, hx, hy, r, col(HAIR, true));
-      else g.fillRect(hx - r, hy - r, 2 * r + 1, Math.max(1, Math.ceil(r * 0.8)));
+      else if (r >= 1) g.fillRect(hx - r, hy - r, 2 * r + 1, Math.max(1, Math.ceil(r * 0.8)));
       if (r >= 2) {
         const sx = (proj(c, [p.x + v.x, p.y + v.y, 9.4]) || Q.head).x > Q.head.x ? 1 : -1; // hacia dónde queda el lado L en pantalla
         const darkSide = litL ? -sx : sx;
         g.fillStyle = col(away ? HAIR : SKIN, false);
         g.fillRect(darkSide > 0 ? hx + 1 : hx - r, hy - r + 1, r, 2 * r - 1);
-        if (!away && r >= 3) { g.fillStyle = "#1a1210"; g.fillRect(hx - 1, hy, 1, 1); g.fillRect(hx + 1, hy, 1, 1); }
+        if (!away && r >= 3) { g.fillStyle = "#0b0e12"; g.fillRect(hx - 1, hy, 1, 1); g.fillRect(hx + 1, hy, 1, 1); }
       }
       if (labels) pxNumber(g, dorsal(e), Q.head.x, Q.head.y - r - 9, teamColor(e));
     }
