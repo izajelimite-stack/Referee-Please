@@ -79,7 +79,7 @@ su precio.
 no se juzgan al momento: vuelven más tarde, en informes, titulares o personajes.
 
 ## 7. Estilo visual
-- **Prototipo**: estética de 16 bits. Imagen de 160x100 ampliada x4, paleta fija de 32 colores,
+- **Prototipo**: estética de 16 bits. Imagen de 213x133 ampliada x3, paleta fija de 32 colores,
   tramado ordenado (Bayer) en césped, sombras y bruma, y sprites con colores planos de la paleta
   (luz, base y sombra) y contorno oscuro.
 - **Luz de estadio nocturno**: cuatro torres de focos en las esquinas; cada jugador proyecta

@@ -190,7 +190,7 @@
 <script>
 (() => {
   "use strict";
-  const W = 320, H = 200, CW = 640, CH = 400, LIVE_MS = 3600;
+  const W = 320, H = 200, CW = 639, CH = 399, LIVE_MS = 3600;
   const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const COL = {
     pitch: "#2f6b3f", pitch2: "#2a613a", chalk: "#dfe8d8", norte: "#7cc4f0", sur: "#f07a5a",
@@ -989,7 +989,7 @@
 
   // ----- 3D: cámaras de televisión y tu vista -----
   // Estilo 16 bits: todo se dibuja a 320x200, píxel a píxel, y se amplía x2 sin suavizar.
-  const LW = 160, LH = 100;
+  const LW = 213, LH = 133; // se amplía x3 exacto al lienzo de 639x399
   const V = {
     sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
     dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
