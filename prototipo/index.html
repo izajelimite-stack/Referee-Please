@@ -1,0 +1,828 @@
+<title>Referee, Please</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Silkscreen:wght@400;700&family=VT323&display=swap">
+<style>
+  /* Un solo tema a propósito: la cabina VAR es oscura. */
+  :root {
+    color-scheme: dark;
+    --booth: #0f1418;
+    --panel: #172027;
+    --panel2: #1d2831;
+    --line: #2b3a45;
+    --ink: #e5ebe3;
+    --muted: #8d9ea6;
+    --amber: #f0b43c;
+    --amber-ink: #1a1305;
+    --norte: #7cc4f0;
+    --sur: #f07a5a;
+    --good: #7fd08a;
+    --bad: #e5533f;
+    --live: #e5533f;
+    --f-display: "Silkscreen", "Courier New", monospace;
+    --f-mono: "VT323", "Courier New", monospace;
+    --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--booth); color: var(--ink); }
+  body { font-family: var(--f-body); font-size: 16px; line-height: 1.45; }
+  button { font: inherit; color: inherit; }
+  button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  #app { max-width: 1120px; margin: 0 auto; padding-block: 16px 40px; padding-inline: 16px; display: grid; gap: 16px; }
+
+  /* Marcador */
+  .hud { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); }
+  .score { font-family: var(--f-mono); font-size: 30px; line-height: 1; display: flex; align-items: center; gap: 10px; font-variant-numeric: tabular-nums; }
+  .score .t { font-size: 22px; padding: 2px 6px; color: var(--booth); }
+  .score .t.n { background: var(--norte); }
+  .score .t.s { background: var(--sur); }
+  .clock { font-family: var(--f-mono); font-size: 30px; line-height: 1; color: var(--amber); font-variant-numeric: tabular-nums; }
+  .meters { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-left: auto; align-items: center; }
+  .meter { display: grid; gap: 3px; min-width: 120px; }
+  .meter label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; }
+  .meter .bar { height: 8px; background: var(--booth); border: 1px solid var(--line); }
+  .meter .fill { height: 100%; transition: width .4s; }
+  .varpips { display: flex; gap: 4px; align-items: center; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .pip { width: 10px; height: 14px; border: 1px solid var(--amber); }
+  .pip.on { background: var(--amber); }
+
+  /* Pantallas de texto */
+  .sheet { background: var(--panel); border: 1px solid var(--line); padding: clamp(20px, 4vw, 40px); display: grid; gap: 18px; }
+  .title { font-family: var(--f-display); font-weight: 700; font-size: clamp(34px, 8vw, 72px); line-height: .95; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+  .title span { color: var(--amber); }
+  .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0; }
+  .lead { font-size: 19px; max-width: 60ch; margin: 0; }
+  .how { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; max-width: 62ch; }
+  .how li { padding-left: 16px; border-left: 3px solid var(--line); }
+  .how b { color: var(--amber); font-weight: 600; }
+
+  .btn { cursor: pointer; border: 1px solid var(--line); background: var(--panel2); padding: 10px 14px; text-align: left; }
+  .btn:hover:not(:disabled) { border-color: var(--muted); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.primary { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); font-weight: 700; justify-self: start; }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn.var { border-color: var(--amber); color: var(--amber); font-weight: 600; }
+  .btn[aria-pressed="true"] { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+
+  /* Partido */
+  .stage { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .left { display: grid; gap: 10px; }
+  .monitor { position: relative; border: 2px solid var(--line); background: #000; }
+  .monitor.var { border-color: var(--amber); }
+  .monitor canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .monitor::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px); }
+  .tag { position: absolute; top: 8px; left: 8px; font-family: var(--f-mono); font-size: 20px; line-height: 1; padding: 3px 8px 4px; background: var(--live); color: #fff; z-index: 1; }
+  .monitor.var .tag { background: var(--amber); color: var(--amber-ink); }
+  .tc { position: absolute; right: 8px; bottom: 6px; font-family: var(--f-mono); font-size: 20px; color: #fff; text-shadow: 0 1px 0 #000; z-index: 1; font-variant-numeric: tabular-nums; }
+  .playover { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; z-index: 2; font-family: var(--f-display); font-size: 18px; padding: 14px 20px; background: var(--amber); color: var(--amber-ink); border: 0; cursor: pointer; }
+
+  .varbar { display: grid; gap: 10px; padding: 12px; background: var(--panel); border: 1px solid var(--amber); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row input[type=range] { flex: 1 1 160px; accent-color: var(--amber); min-width: 0; }
+  .row .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .btn.sm { padding: 6px 10px; font-size: 14px; }
+  .seg { display: inline-flex; }
+  .seg .btn + .btn { border-left: 0; }
+
+  .side { display: grid; gap: 14px; }
+  .case { display: grid; gap: 4px; }
+  .case h2 { font-family: var(--f-display); font-size: 22px; line-height: 1.1; margin: 0; text-wrap: balance; }
+  .log { list-style: none; margin: 0; padding: 10px 12px; display: grid; gap: 8px; background: #0b1013; border: 1px solid var(--line); font-family: var(--f-mono); font-size: 20px; line-height: 1.1; max-height: 280px; overflow-y: auto; }
+  .log li { display: grid; gap: 1px; }
+  .log .who { font-size: 16px; letter-spacing: .06em; }
+  .who.ASISTENTE { color: var(--norte); }
+  .who.SALA { color: var(--amber); }
+  .who.GRADA { color: var(--sur); }
+  .who.TU { color: var(--good); }
+  .who.COMITE { color: var(--muted); }
+  .decide { display: grid; gap: 8px; }
+  .decide h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+  .opt { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+  .opt .card { width: 12px; height: 16px; flex: none; border: 1px solid rgba(0,0,0,.4); }
+  .card.y { background: #f2cf3a; } .card.r { background: #d9352a; } .card.w { background: var(--ink); } .card.g { background: var(--good); }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+
+  details.rules { background: var(--panel); border: 1px solid var(--line); }
+  details.rules summary { cursor: pointer; padding: 10px 12px; font-weight: 600; }
+  details.rules ul { margin: 0; padding: 0 14px 12px 30px; display: grid; gap: 6px; font-size: 15px; }
+  .circ { color: var(--amber); font-weight: 600; }
+
+  /* Informe */
+  .report { background: #e9e4d6; color: #1f1c16; padding: clamp(20px, 4vw, 40px); display: grid; gap: 18px; position: relative; overflow: hidden; }
+  .report h2 { font-family: var(--f-display); font-size: clamp(20px, 4vw, 30px); margin: 0; line-height: 1.1; }
+  .report .eyebrow { color: #6d6555; }
+  .tablewrap { overflow-x: auto; }
+  .report table { color: inherit; font-family: inherit; border-collapse: collapse; width: 100%; font-size: 15px; min-width: 560px; }
+  .report th, .report td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #c9c1ad; vertical-align: top; }
+  .report th { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #6d6555; }
+  .report td.num, .report th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .res { font-weight: 700; }
+  .res.correct { color: #2f7a3a; } .res.partial { color: #9a6a00; } .res.wrong { color: #b0271b; }
+  .why { color: #4d473b; font-size: 14px; }
+  .pay { max-width: 420px; }
+  .pay td { border-bottom: 1px dashed #c9c1ad; }
+  .pay tr.total td { border-bottom: 0; border-top: 2px solid #1f1c16; font-weight: 700; }
+  .stamp { position: absolute; top: 28px; right: 24px; transform: rotate(-9deg); font-family: var(--f-display); font-weight: 700; font-size: clamp(16px, 3vw, 26px); padding: 6px 12px; border: 4px solid currentColor; opacity: .85; text-align: center; line-height: 1.05; max-width: 45%; }
+  .stamp.ok { color: #2f7a3a; } .stamp.mid { color: #b07800; } .stamp.bad { color: #b0271b; }
+  .report .note { max-width: 62ch; margin: 0; }
+  @media (max-width: 560px) { .stamp { position: static; justify-self: start; transform: rotate(-4deg); max-width: none; } }
+
+  @media (prefers-reduced-motion: reduce) { .meter .fill { transition: none; } }
+</style>
+
+<div id="app">
+  <header class="hud" id="hud" hidden>
+    <div class="score"><span class="t n">NOR</span><b id="sN">0</b><span>–</span><b id="sS">0</b><span class="t s">SUR</span></div>
+    <div class="clock" id="clock">0'</div>
+    <div class="meters">
+      <div class="meter"><label>Reputación <span id="repV"></span></label><div class="bar"><div class="fill" id="repF" style="background: var(--good)"></div></div></div>
+      <div class="meter"><label>Presión grada <span id="presV"></span></label><div class="bar"><div class="fill" id="presF" style="background: var(--sur)"></div></div></div>
+      <div class="varpips" id="pips"></div>
+    </div>
+  </header>
+  <main id="screen"></main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const W = 320, H = 200, LIVE_MS = 3600;
+  const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const COL = {
+    pitch: "#2f6b3f", pitch2: "#2a613a", chalk: "#dfe8d8", norte: "#7cc4f0", sur: "#f07a5a",
+    gkN: "#f2d65c", gkS: "#b98ee8", ball: "#ffffff", dark: "#0b160f", amber: "#f0b43c", arm: "#b34a2f"
+  };
+
+  // ---------- Utilidades ----------
+  function at(keys, t) {
+    if (t <= keys[0][0]) return { x: keys[0][1], y: keys[0][2] ?? 0 };
+    for (let i = 1; i < keys.length; i++) {
+      if (t <= keys[i][0]) {
+        const a = keys[i - 1], b = keys[i], u = (t - a[0]) / (b[0] - a[0]);
+        return { x: a[1] + (b[1] - a[1]) * u, y: (a[2] ?? 0) + ((b[2] ?? 0) - (a[2] ?? 0)) * u };
+      }
+    }
+    const l = keys[keys.length - 1];
+    return { x: l[1], y: l[2] ?? 0 };
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Poses para la cámara lateral
+  const run = (t, speed = 38) => { const a = 28 * Math.sin(t * speed); return { legF: a, legB: -a, lean: 8 }; };
+
+  // ---------- Las jugadas de la Jornada 1 ----------
+  const INCIDENTS = [
+    {
+      minute: 12, title: "Contra por el centro",
+      pre: [["ASISTENTE", "Atento: el Norte sale a la contra por el centro. El 8 levanta la cabeza..."]],
+      post: [["GRADA", "¡¡GOOOL!! ¡Gol del Norte!"], ["ASISTENTE", "No he visto bien la posición del 9. La decisión es tuya."]],
+      varHint: ["SALA VAR", "Desde aquí no vemos nada claro. Si quieres revisar, es cosa tuya."],
+      events: [[0.3, "Pase"], [0.8, "Disparo"], [1, "Gol"]],
+      focus: "A9",
+      options: [
+        { label: "Gol válido", card: "g", grade: "wrong", pressure: -10, goal: "N", crowd: "La grada del Norte celebra el 1-0." },
+        { label: "Anular: fuera de juego", card: "w", grade: "correct", pressure: 18, crowd: "Pitada monumental. Te llueven insultos desde el fondo." }
+      ],
+      truth: "Anular: fuera de juego",
+      why: "En el momento del pase, el 9 celeste tenía el hombro por delante del penúltimo defensor. Fuera de juego por muy poco: solo se veía con la línea del VAR.",
+      ents: [
+        { id: "M8", t: "N", k: [[0, 150, 120], [0.3, 168, 112], [1, 190, 110]] },
+        { id: "A9", t: "N", k: [[0, 226, 86], [0.3, 239.5, 88], [0.6, 268, 94], [0.8, 282, 97], [1, 288, 98]] },
+        { id: "A7", t: "N", k: [[0, 200, 150], [1, 240, 145]] },
+        { id: "A11", t: "N", k: [[0, 196, 40], [1, 236, 52]] },
+        { id: "D4", t: "S", k: [[0, 240, 92], [0.3, 237, 94], [0.6, 262, 98], [1, 275, 99]] },
+        { id: "D5", t: "S", k: [[0, 234, 128], [0.3, 234, 124], [1, 258, 118]] },
+        { id: "D2", t: "S", k: [[0, 228, 60], [1, 250, 72]] },
+        { id: "D3", t: "S", k: [[0, 226, 162], [1, 246, 150]] },
+        { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [0.8, 294, 99], [1, 297, 93]] }
+      ],
+      ball: [[0, 152, 121], [0.3, 170, 113], [0.6, 270, 95], [0.8, 285, 97], [1, 306, 93]]
+    },
+    {
+      minute: 27, title: "Regate en el área",
+      pre: [["ASISTENTE", "El 11 celeste encara por la derecha y entra en el área..."]],
+      post: [["GRADA", "¡¡PENALTI, PENALTI!!"], ["ASISTENTE", "Ha caído dentro del área. No sé si hay contacto."]],
+      varHint: ["SALA VAR", "Desde aquí parece penalti claro. ¿Quieres revisar?"],
+      events: [[0.5, "Entrada"], [0.62, "Caída"]],
+      focus: "A11",
+      options: [
+        { label: "Penalti", card: "w", grade: "wrong", pressure: -8, goal: "N", crowd: "La grada ruge. El 9 marca el penalti." },
+        { label: "Seguir jugando", card: "g", grade: "partial", pressure: 8, crowd: "Silbidos. El 11 se levanta protestando." },
+        { label: "Amarilla al 11 por simulación", card: "y", grade: "correct", pressure: 15, crowd: "La grada no se lo puede creer. Lanzan algo al campo." }
+      ],
+      truth: "Amarilla al 11 por simulación",
+      why: "El defensor tocó el balón primero y no llegó a tocar al 11, que se tiró sin contacto. Amarilla por simulación. Dejar seguir el juego era aceptable, pero incompleto.",
+      ents: [
+        { id: "A11", t: "N", fall: 0.62, k: [[0, 236, 150], [0.45, 262, 126], [0.5, 266, 122], [0.62, 274, 117], [1, 277, 116]] },
+        { id: "A9", t: "N", k: [[0, 250, 96], [1, 276, 92]] },
+        { id: "D3", t: "S", k: [[0, 258, 110], [0.45, 262, 128], [0.5, 265, 131], [0.6, 268, 134], [1, 269, 136]] },
+        { id: "D4", t: "S", k: [[0, 262, 90], [1, 282, 96]] },
+        { id: "D5", t: "S", k: [[0, 230, 132], [1, 252, 136]] },
+        { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [1, 296, 108]] }
+      ],
+      ball: [[0, 240, 149], [0.3, 256, 137], [0.48, 265, 130], [0.5, 266, 131], [0.75, 284, 165], [1, 296, 184]],
+      side: {
+        focus: 170,
+        figs: [
+          { c: COL.norte, dir: 1, k: [[0, 40], [0.5, 152], [0.58, 160], [0.72, 168], [1, 170]],
+            pose: t => t < 0.58 ? run(t) : { legF: 20, legB: -30, lean: 10, armsUp: true, fall: clamp((t - 0.58) / 0.14, 0, 1) } },
+          { c: COL.sur, dir: -1, k: [[0, 250], [0.3, 212], [0.5, 190], [0.65, 186], [1, 186]],
+            pose: t => t < 0.3 ? run(t) : { slide: true, legF: 90 - clamp((t - 0.5) * 300, 0, 50), legB: -40, lean: -55 } }
+        ],
+        ball: [[0, 48, 0], [0.45, 166, 0], [0.5, 172, 0], [0.7, 200, 16], [0.9, 240, 4], [1, 256, 0]]
+      }
+    },
+    {
+      minute: 41, title: "Centro al área",
+      pre: [["ASISTENTE", "Centro desde la izquierda del Norte. El 9 ataca el primer palo..."]],
+      post: [["GRADA", "¡¡MANO, MANO!!"], ["ASISTENTE", "Creo que le ha dado al central en el brazo."]],
+      varHint: ["SALA VAR", "Posible mano del central. Te recomendamos revisar."],
+      events: [[0.2, "Centro"], [0.55, "Impacto"]],
+      focus: "D2",
+      options: [
+        { label: "Penalti por mano", card: "w", grade: "wrong", pressure: -8, goal: "N", crowd: "Euforia en la grada. El 9 transforma el penalti." },
+        { label: "No es penalti: seguir", card: "g", grade: "correct", pressure: 15, crowd: "Bronca enorme. El capitán del Norte te persigue protestando." }
+      ],
+      truth: "No es penalti",
+      why: "El balón dio en el brazo del central, pero lo tenía pegado al cuerpo. Según la circular de esta jornada, así no es penalti.",
+      ents: [
+        { id: "A7", t: "N", k: [[0, 250, 22], [0.2, 262, 26], [1, 268, 30]] },
+        { id: "A9", t: "N", k: [[0, 270, 70], [0.55, 278, 92], [1, 280, 98]] },
+        { id: "A10", t: "N", k: [[0, 236, 104], [1, 258, 110]] },
+        { id: "D2", t: "S", arm: true, k: [[0, 286, 88], [0.55, 283, 99], [1, 285, 102]] },
+        { id: "D4", t: "S", k: [[0, 284, 116], [1, 282, 118]] },
+        { id: "D5", t: "S", k: [[0, 262, 120], [1, 266, 116]] },
+        { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [0.4, 297, 92], [1, 297, 96]] }
+      ],
+      ball: [[0, 248, 24], [0.2, 263, 27], [0.55, 280.5, 97.5], [1, 252, 122]]
+    },
+    {
+      minute: 63, title: "Entrada en el medio campo",
+      pre: [["ASISTENTE", "El 10 celeste arranca desde el medio campo. Le sale el 6 del Sur..."]],
+      post: [["GRADA", "¡¡FUERA, FUERA!!"], ["ASISTENTE", "Entrada fuerte del 6. Para mí es amarilla."]],
+      varHint: ["SALA VAR", "Nosotros no vemos nada grave. Amarilla y seguimos."],
+      events: [[0.5, "Entrada"]],
+      focus: "A10",
+      options: [
+        { label: "Seguir jugando", card: "g", grade: "wrong", pressure: 14, crowd: "La grada pide tu cabeza." },
+        { label: "Falta y amarilla al 6", card: "y", grade: "wrong", pressure: 4, crowd: "Murmullos. Esperaban más." },
+        { label: "Falta y roja directa al 6", card: "r", grade: "correct", pressure: -12, crowd: "La grada del Norte aplaude. El banquillo del Sur explota." }
+      ],
+      truth: "Roja directa al 6",
+      why: "El 6 entró con los tacos por delante a la altura del tobillo. Es roja directa, diga lo que diga la sala VAR.",
+      ents: [
+        { id: "A10", t: "N", fall: 0.56, k: [[0, 120, 110], [0.5, 160, 112], [0.56, 164, 113], [1, 167, 114]] },
+        { id: "A8", t: "N", k: [[0, 110, 70], [1, 150, 76]] },
+        { id: "D6", t: "S", k: [[0, 150, 150], [0.5, 160, 118], [0.6, 164, 116], [1, 166, 117]] },
+        { id: "D8", t: "S", k: [[0, 190, 96], [1, 184, 104]] },
+        { id: "D4", t: "S", k: [[0, 236, 104], [1, 228, 106]] }
+      ],
+      ball: [[0, 122, 110], [0.45, 158, 111], [1, 200, 104]],
+      side: {
+        focus: 166,
+        figs: [
+          { c: COL.norte, dir: 1, k: [[0, 60], [0.46, 154], [0.5, 158], [0.56, 166], [1, 176]],
+            pose: t => t < 0.46 ? run(t) : t < 0.52 ? { legF: 10, legB: -15, lean: 8 } : { legF: 25, legB: -35, lean: 10, fall: clamp((t - 0.52) / 0.15, 0, 1) } },
+          { c: COL.sur, dir: -1, k: [[0, 260], [0.38, 196], [0.5, 178], [0.62, 172], [1, 170]],
+            pose: t => {
+              if (t < 0.38) return run(t);
+              const up = t < 0.5 ? 20 + (t - 0.38) / 0.12 * 58 : t < 0.62 ? 78 : Math.max(10, 78 - (t - 0.62) * 520);
+              return { legF: up, legB: -12, lean: -20, studs: up > 45 };
+            } }
+        ],
+        ball: [[0, 66, 0], [0.45, 156, 0], [1, 236, 0]]
+      }
+    },
+    {
+      minute: 88, title: "Disparo desde fuera",
+      pre: [["ASISTENTE", "Últimos minutos. El 10 celeste se perfila para disparar..."]],
+      post: [["GRADA", "¡¡GOLAZO!! ¡Por la escuadra!"]],
+      varHint: ["SALA VAR", "Espera, espera... Revisa una posible falta previa del 9."],
+      events: [[0.35, "Disparo"], [0.8, "Gol"]],
+      focus: "A9",
+      options: [
+        { label: "Gol válido", card: "g", grade: "correct", pressure: -12, goal: "N", crowd: "El estadio se viene abajo." },
+        { label: "Anular por falta previa", card: "w", grade: "wrong", pressure: 25, crowd: "Invasión de campo evitada por poco. Te escoltan a la banda." }
+      ],
+      truth: "Gol válido",
+      why: "Gol limpio. El 9 no tocó a nadie. La sala VAR te pidió revisar sin ningún motivo.",
+      ents: [
+        { id: "A10", t: "N", k: [[0, 190, 100], [0.35, 214, 98], [1, 222, 97]] },
+        { id: "A9", t: "N", k: [[0, 236, 120], [0.5, 248, 118], [1, 258, 116]] },
+        { id: "A7", t: "N", k: [[0, 226, 60], [1, 250, 66]] },
+        { id: "D5", t: "S", k: [[0, 246, 108], [1, 252, 112]] },
+        { id: "D4", t: "S", k: [[0, 250, 82], [1, 256, 86]] },
+        { id: "D2", t: "S", k: [[0, 232, 70], [1, 240, 76]] },
+        { id: "GK", t: "S", gk: true, k: [[0, 298, 100], [0.6, 298, 96], [0.8, 297, 86], [1, 296, 84]] }
+      ],
+      ball: [[0, 192, 100], [0.35, 217, 98], [0.8, 305, 88], [1, 309, 88]]
+    }
+  ];
+  const HALF_AFTER = 2; // el descanso llega después de la jugada 3
+
+  // ---------- Estado ----------
+  const fresh = () => ({
+    screen: "intro", idx: 0, rep: 50, pressure: 20, varLeft: 3, extra: 0,
+    score: { N: 0, S: 0 }, decisions: [], bribe: null, log: [],
+    cur: { watched: false, varOpen: false, decided: null }
+  });
+  let state = fresh();
+
+  // Estado de la vista (no se guarda)
+  const view = { t: 0, cam: "cenital", zoom: false, line: false, anim: 0 };
+
+  const $ = s => document.querySelector(s);
+  const screen = $("#screen");
+
+  function renderHud() {
+    const hud = $("#hud");
+    hud.hidden = state.screen === "intro";
+    $("#sN").textContent = state.score.N;
+    $("#sS").textContent = state.score.S;
+    const inc = INCIDENTS[state.idx];
+    $("#clock").textContent = state.screen === "half" ? "DESCANSO" : state.screen === "report" ? "FINAL" : `${inc.minute}'` + (state.extra ? ` +${state.extra}` : "");
+    $("#repV").textContent = state.rep;
+    $("#presV").textContent = state.pressure;
+    $("#repF").style.width = clamp(state.rep, 0, 100) + "%";
+    $("#presF").style.width = clamp(state.pressure, 0, 100) + "%";
+    $("#pips").innerHTML = "VAR " + [0, 1, 2].map(i => `<span class="pip ${i < state.varLeft ? "on" : ""}"></span>`).join("");
+  }
+
+  function render() {
+    cancelAnimationFrame(view.anim);
+    renderHud();
+    if (state.screen === "intro") renderIntro();
+    else if (state.screen === "incident") renderIncident();
+    else if (state.screen === "half") renderHalf();
+    else renderReport();
+  }
+
+  // ---------- Portada ----------
+  function renderIntro() {
+    screen.innerHTML = `
+      <section class="sheet">
+        <p class="eyebrow">Tercera División · Jornada 1 · Prototipo v0.1</p>
+        <h1 class="title">Referee,<br><span>Please</span></h1>
+        <p class="lead">Hoy arbitras <b style="color:var(--norte)">Deportivo Norte</b> contra <b style="color:var(--sur)">Atlético Sur</b>. El estadio es del Norte y el comité te está vigilando.</p>
+        <ul class="how">
+          <li>Cada jugada la ves <b>una sola vez</b>, en directo. Mira bien.</li>
+          <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, zoom, cámara lateral y línea de fuera de juego. Solo tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
+          <li>La sala VAR, tu asistente y la grada opinan. <b>No siempre tienen razón.</b></li>
+          <li>Lee el <b>reglamento de la jornada</b>: las circulares cambian las reglas.</li>
+          <li>No sabrás si acertaste hasta el <b>informe del comité</b>, al final del partido.</li>
+        </ul>
+        <button class="btn primary" id="go">Salir al campo</button>
+      </section>`;
+    $("#go").onclick = () => { state = fresh(); state.screen = "incident"; startIncident(); };
+  }
+
+  // ---------- Jugada ----------
+  function startIncident() {
+    const inc = INCIDENTS[state.idx];
+    state.cur = { watched: false, varOpen: false, decided: null };
+    state.log = inc.pre.map(m => [...m]);
+    Object.assign(view, { t: 0, cam: "cenital", zoom: false, line: false });
+    render();
+  }
+
+  const RULES = `
+    <details class="rules" id="rules">
+      <summary>Reglamento · Jornada 1</summary>
+      <ul>
+        <li><b>Fuera de juego:</b> en el momento del pase, el atacante está en fuera si alguna parte de su cuerpo está más cerca de la portería que el penúltimo defensor (el portero cuenta).</li>
+        <li><b>Entradas:</b> entrada imprudente = amarilla. Tacos por delante sobre el tobillo o la espinilla = roja directa.</li>
+        <li><b>Simulación:</b> tirarse sin contacto = amarilla al que se tira.</li>
+        <li class="circ">Circular J1: la mano solo es penalti si el brazo está separado del cuerpo.</li>
+        <li class="circ">Circular J1: máximo 3 revisiones VAR por partido.</li>
+      </ul>
+    </details>`;
+
+  function renderIncident() {
+    const inc = INCIDENTS[state.idx], c = state.cur;
+    screen.innerHTML = `
+      <section class="stage">
+        <div class="left">
+          <div class="monitor ${c.varOpen ? "var" : ""}" id="monitor">
+            <canvas id="cv" width="${W}" height="${H}" aria-label="Vista de la jugada"></canvas>
+            <div class="tag" id="tag">${c.varOpen ? "VAR · REVISIÓN" : "● EN DIRECTO"}</div>
+            <div class="tc" id="tc"></div>
+            ${c.watched ? "" : `<button class="playover" id="playBtn">▶ Ver jugada</button>`}
+          </div>
+          <div class="varbar" id="varbar" ${c.varOpen ? "" : "hidden"}>
+            <div class="row">
+              <button class="btn sm" id="fb" aria-label="Frame anterior">◀</button>
+              <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Línea de tiempo">
+              <button class="btn sm" id="ff" aria-label="Frame siguiente">▶</button>
+              <button class="btn sm" id="slow">Cámara lenta</button>
+            </div>
+            <div class="row"><span class="lbl">Ir a</span>${inc.events.map(([t, l]) => `<button class="btn sm" data-jump="${t}">${l}</button>`).join("")}</div>
+            <div class="row">
+              <button class="btn sm" id="zoom" aria-pressed="false">Zoom</button>
+              <button class="btn sm" id="line" aria-pressed="false">Línea de fuera de juego</button>
+              <span class="seg">
+                <button class="btn sm" data-cam="cenital">Cenital</button>
+                <button class="btn sm" data-cam="lateral" ${inc.side ? "" : "disabled title='No hay cámara lateral para esta jugada'"}>Lateral</button>
+              </span>
+            </div>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="case">
+            <p class="eyebrow">Minuto ${inc.minute} · Jugada ${state.idx + 1} de ${INCIDENTS.length}</p>
+            <h2>${esc(inc.title)}</h2>
+          </div>
+          <ol class="log" id="log" aria-live="polite"></ol>
+          <div class="decide" id="decide"></div>
+          ${RULES}
+        </aside>
+      </section>`;
+    renderLog();
+    renderDecide();
+    wireVar();
+    if (c.watched) { view.t = c.varOpen ? view.t : 1; }
+    draw();
+    const pb = $("#playBtn");
+    if (pb) pb.onclick = playLive;
+  }
+
+  function renderLog() {
+    const el = $("#log");
+    if (!el) return;
+    el.innerHTML = state.log.map(([who, txt]) => `<li><span class="who ${who.split(" ")[0].replace("Ú", "U").replace("É", "E")}">${esc(who)}</span><span>${esc(txt)}</span></li>`).join("");
+    el.scrollTop = el.scrollHeight;
+  }
+  function say(who, txt) { state.log.push([who, txt]); renderLog(); }
+
+  function renderDecide() {
+    const inc = INCIDENTS[state.idx], c = state.cur, el = $("#decide");
+    if (c.decided !== null) {
+      const last = state.idx === INCIDENTS.length - 1;
+      el.innerHTML = `<button class="btn primary" id="next">${last ? "Ver el informe del comité →" : state.idx === HALF_AFTER ? "Ir al descanso →" : "Siguiente jugada →"}</button>`;
+      $("#next").onclick = nextStep;
+      return;
+    }
+    el.innerHTML = `
+      <h3>Tu decisión</h3>
+      ${inc.options.map((o, i) => `<button class="btn opt" data-opt="${i}" ${c.watched ? "" : "disabled"}><span class="card ${o.card}"></span>${esc(o.label)}</button>`).join("")}
+      ${c.varOpen ? `<p class="hint">Estás revisando en el VAR. Decide cuando lo tengas claro.</p>` :
+        `<button class="btn var" id="varBtn" ${c.watched && state.varLeft > 0 ? "" : "disabled"}>Pedir VAR (quedan ${state.varLeft})</button>`}
+      ${c.watched ? "" : `<p class="hint">Primero mira la jugada.</p>`}`;
+    el.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => decide(+b.dataset.opt));
+    const vb = $("#varBtn");
+    if (vb) vb.onclick = openVar;
+  }
+
+  function playLive() {
+    const pb = $("#playBtn");
+    if (pb) pb.remove();
+    const t0 = performance.now();
+    const step = now => {
+      view.t = clamp((now - t0) / LIVE_MS, 0, 1);
+      draw();
+      if (view.t < 1) view.anim = requestAnimationFrame(step);
+      else finishLive();
+    };
+    view.anim = requestAnimationFrame(step);
+  }
+
+  function finishLive() {
+    const inc = INCIDENTS[state.idx];
+    state.cur.watched = true;
+    const msgs = [...inc.post, inc.varHint];
+    let i = 0;
+    const next = () => {
+      if (i >= msgs.length) return;
+      say(...msgs[i++]);
+      if (i < msgs.length) setTimeout(next, RM ? 0 : 700);
+    };
+    next();
+    renderDecide();
+  }
+
+  function openVar() {
+    if (state.varLeft <= 0) return;
+    state.varLeft--;
+    state.extra += 2;
+    state.pressure = clamp(state.pressure + 8, 0, 100);
+    state.cur.varOpen = true;
+    view.t = 0;
+    say("TÚ", "Me voy a la pantalla. Revisión VAR.");
+    say("GRADA", "Uuuuuh... (la grada se impacienta)");
+    renderHud();
+    $("#monitor").classList.add("var");
+    $("#tag").textContent = "VAR · REVISIÓN";
+    $("#varbar").hidden = false;
+    renderDecide();
+    draw();
+  }
+
+  function wireVar() {
+    const scrub = $("#scrub");
+    if (!scrub) return;
+    const set = t => { stopSlow(); view.t = clamp(t, 0, 1); draw(); };
+    scrub.oninput = () => set(scrub.value / 1000);
+    $("#fb").onclick = () => set(view.t - 0.01);
+    $("#ff").onclick = () => set(view.t + 0.01);
+    document.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => set(+b.dataset.jump));
+    const toggle = (id, key) => { const b = $(id); b.onclick = () => { view[key] = !view[key]; draw(); }; };
+    toggle("#zoom", "zoom");
+    toggle("#line", "line");
+    document.querySelectorAll("[data-cam]").forEach(b => b.onclick = () => { view.cam = b.dataset.cam; draw(); });
+    $("#slow").onclick = () => {
+      if (view.slowing) { stopSlow(); return; }
+      if (view.t >= 1) view.t = 0;
+      view.slowing = true;
+      $("#slow").setAttribute("aria-pressed", "true");
+      let last = performance.now();
+      const step = now => {
+        view.t = clamp(view.t + (now - last) / (LIVE_MS * 4), 0, 1);
+        last = now;
+        draw();
+        if (view.t < 1 && view.slowing) view.anim = requestAnimationFrame(step);
+        else stopSlow();
+      };
+      view.anim = requestAnimationFrame(step);
+    };
+  }
+  function stopSlow() {
+    view.slowing = false;
+    cancelAnimationFrame(view.anim);
+    const b = $("#slow");
+    if (b) b.setAttribute("aria-pressed", "false");
+  }
+
+  function decide(i) {
+    const inc = INCIDENTS[state.idx], o = inc.options[i];
+    stopSlow();
+    state.cur.decided = i;
+    state.decisions[state.idx] = i;
+    state.pressure = clamp(state.pressure + o.pressure, 0, 100);
+    state.rep = clamp(state.rep + (o.grade === "correct" ? 10 : o.grade === "partial" ? 3 : -10), 0, 100);
+    if (o.goal) state.score[o.goal]++;
+    say("TÚ", o.label + ".");
+    say("GRADA", o.crowd);
+    if (state.pressure >= 80) say("GRADA", "El ambiente es irrespirable. El delegado pide calma por megafonía.");
+    renderHud();
+    renderDecide();
+  }
+
+  function nextStep() {
+    if (state.idx === HALF_AFTER && state.screen === "incident") { state.screen = "half"; render(); return; }
+    state.extra = 0;
+    if (state.idx >= INCIDENTS.length - 1) { state.screen = "report"; render(); return; }
+    state.idx++;
+    state.screen = "incident";
+    startIncident();
+  }
+
+  // ---------- Descanso ----------
+  function renderHalf() {
+    const b = state.bribe;
+    screen.innerHTML = `
+      <section class="sheet">
+        <p class="eyebrow">Descanso · Vestuario arbitral</p>
+        <h2 class="title" style="font-size:clamp(26px,5vw,44px)">Un sobre en la taquilla</h2>
+        <p class="lead">Encima de tu ropa hay un sobre que antes no estaba. Dentro hay <b>300 €</b> en billetes y una nota:</p>
+        <p class="lead" style="font-family:var(--f-mono);font-size:24px;color:var(--amber)">«Por un buen arbitraje en la segunda parte. Un amigo del Atlético Sur.»</p>
+        ${b === null ? `
+          <div class="row">
+            <button class="btn" id="keep">Guardar el sobre en la mochila</button>
+            <button class="btn" id="give">Entregarlo al delegado del partido</button>
+          </div>` : `
+          <p class="lead">${b === "keep" ? "Guardas el sobre. Nadie te ha visto. Eso crees." : "El delegado se lleva el sobre y toma nota. «Esto lo va a saber el comité», te dice."}</p>
+          <button class="btn primary" id="cont">Salir a la segunda parte →</button>`}
+      </section>`;
+    if (b === null) {
+      $("#keep").onclick = () => { state.bribe = "keep"; renderHalf(); };
+      $("#give").onclick = () => { state.bribe = "give"; state.rep = clamp(state.rep + 5, 0, 100); renderHud(); renderHalf(); };
+    } else {
+      $("#cont").onclick = () => { state.idx++; state.screen = "incident"; startIncident(); };
+    }
+  }
+
+  // ---------- Informe ----------
+  function renderReport() {
+    const PAY = { correct: 30, partial: 10, wrong: -40 };
+    const rows = INCIDENTS.map((inc, i) => {
+      const o = inc.options[state.decisions[i]];
+      return { inc, o, grade: o.grade };
+    });
+    const count = g => rows.filter(r => r.grade === g).length;
+    const nC = count("correct"), nP = count("partial"), nW = count("wrong");
+    const kept = state.bribe === "keep";
+    const favoredSur = rows[3].grade !== "correct";
+    const fine = state.pressure >= 70 ? -20 : 0;
+    const lines = [
+      ["Sueldo base del partido", 120],
+      [`Bonificación por aciertos (${nC} × 30 €)`, nC * PAY.correct],
+      ...(nP ? [[`Decisiones aceptables (${nP} × 10 €)`, nP * PAY.partial]] : []),
+      ...(nW ? [[`Multas por errores (${nW} × 40 €)`, nW * PAY.wrong]] : []),
+      ...(fine ? [["Sanción por incidentes en la grada", fine]] : []),
+      ...(kept ? [["Sobre sin remitente", 300]] : [])
+    ];
+    const total = lines.reduce((s, l) => s + l[1], 0);
+
+    let stamp, cls, note;
+    if (kept && favoredSur) {
+      stamp = "EXPEDIENTE ABIERTO"; cls = "bad";
+      note = "El comité ha recibido una denuncia anónima sobre la entrada del minuto 63. Te llamarán a declarar antes de la Jornada 2.";
+    } else if (nC >= 4) {
+      stamp = "APROBADO"; cls = "ok";
+      note = "Buen partido. El comité toma nota para futuros ascensos.";
+    } else if (nC >= 2) {
+      stamp = "APROBADO CON RESERVAS"; cls = "mid";
+      note = "Actuación irregular. Se revisarán tus próximas designaciones.";
+    } else {
+      stamp = "SUSPENSO"; cls = "bad";
+      note = "Demasiados errores. Te quedas sin designación la próxima jornada.";
+    }
+    if (kept && !favoredSur) note += " Por cierto: alguien del Atlético Sur está muy enfadado contigo.";
+    if (state.bribe === "give") note += " El comité agradece que entregaras el sobre al delegado.";
+
+    const sign = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + " €";
+    const gradeTxt = { correct: "Correcta", partial: "Aceptable", wrong: "Error" };
+    screen.innerHTML = `
+      <section class="report">
+        <div class="stamp ${cls}">${stamp}</div>
+        <div>
+          <p class="eyebrow">Comité Técnico de Árbitros · Informe de actuación</p>
+          <h2>Jornada 1 · Dep. Norte ${state.score.N} – ${state.score.S} At. Sur</h2>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Min.</th><th>Jugada</th><th>Tu decisión</th><th>Lo correcto</th><th>Resultado</th></tr></thead>
+            <tbody>
+              ${rows.map(r => `
+                <tr>
+                  <td class="num">${r.inc.minute}'</td>
+                  <td>${esc(r.inc.title)}</td>
+                  <td>${esc(r.o.label)}</td>
+                  <td>${esc(r.inc.truth)}<div class="why">${esc(r.inc.why)}</div></td>
+                  <td class="res ${r.grade}">${gradeTxt[r.grade]}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        <table class="pay">
+          <tbody>
+            ${lines.map(([l, v]) => `<tr><td>${esc(l)}</td><td class="num">${sign(v)}</td></tr>`).join("")}
+            <tr class="total"><td>Total a cobrar</td><td class="num">${sign(total)}</td></tr>
+          </tbody>
+        </table>
+        <p class="note"><b>Observaciones:</b> ${esc(note)}</p>
+        <p class="note">Reputación final: <b>${state.rep}</b>/100 · Presión de grada final: <b>${state.pressure}</b>/100 · Revisiones VAR usadas: <b>${3 - state.varLeft}</b> de 3</p>
+        <button class="btn primary" id="again" style="color:#1a1305">Volver a arbitrar</button>
+      </section>`;
+    $("#again").onclick = () => { state = fresh(); render(); };
+  }
+
+  // ---------- Dibujo ----------
+  function draw() {
+    const cv = $("#cv");
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    const inc = INCIDENTS[state.idx];
+    const c = state.cur;
+    const varOn = c.varOpen;
+    const cam = varOn && view.cam === "lateral" && inc.side ? "lateral" : "cenital";
+    if (cam === "lateral") drawSide(ctx, inc, view.t, varOn && view.zoom);
+    else drawTop(ctx, inc, view.t, varOn && view.zoom, varOn && view.line);
+    const tc = $("#tc");
+    if (tc) tc.textContent = varOn ? `${cam === "lateral" ? "CAM LAT" : "CAM CEN"}${view.zoom ? " ×3" : ""} · ${(view.t * LIVE_MS / 1000).toFixed(2)}s` : `${inc.minute}'`;
+    const scrub = $("#scrub");
+    if (scrub) scrub.value = Math.round(view.t * 1000);
+    const zb = $("#zoom"), lb = $("#line");
+    if (zb) zb.setAttribute("aria-pressed", String(view.zoom));
+    if (lb) { lb.setAttribute("aria-pressed", String(view.line)); lb.disabled = cam === "lateral"; }
+    document.querySelectorAll("[data-cam]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cam === cam)));
+  }
+
+  function drawPitch(ctx) {
+    for (let i = 0; i < 17; i++) { ctx.fillStyle = i % 2 ? COL.pitch2 : COL.pitch; ctx.fillRect(i * 20, 0, 20, H); }
+    ctx.strokeStyle = COL.chalk; ctx.lineWidth = 1;
+    ctx.strokeRect(10.5, 6.5, 294, 188);
+    ctx.strokeRect(256.5, 46.5, 48, 108);
+    ctx.strokeRect(290.5, 74.5, 14, 52);
+    ctx.fillStyle = COL.chalk; ctx.fillRect(272, 100, 1, 1);
+    const a = Math.acos(-16 / 24);
+    ctx.beginPath(); ctx.arc(272.5, 100.5, 24, a, 2 * Math.PI - a); ctx.stroke();
+    ctx.beginPath(); ctx.arc(10.5, 100.5, 22, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+    // portería
+    ctx.fillStyle = "rgba(230,240,230,.25)"; ctx.fillRect(305, 90, 6, 20);
+    ctx.fillStyle = COL.chalk; ctx.fillRect(304, 89, 7, 1); ctx.fillRect(304, 110, 7, 1);
+  }
+
+  function drawTop(ctx, inc, t, zoom, line) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#08100b"; ctx.fillRect(0, 0, W, H);
+    if (zoom) {
+      const f = at(inc.ents.find(e => e.id === inc.focus).k, t), s = 3;
+      ctx.setTransform(s, 0, 0, s, Math.round(W / 2 - f.x * s), Math.round(H / 2 - f.y * s));
+    }
+    drawPitch(ctx);
+    const pos = inc.ents.map(e => ({ e, p: at(e.k, t) }));
+    if (line) {
+      const xs = pos.filter(o => o.e.t === "S").map(o => o.p.x + 3).sort((a, b) => b - a);
+      const lx = xs[1] ?? xs[0];
+      ctx.fillStyle = COL.amber;
+      ctx.fillRect(lx - (zoom ? 0.17 : 0.5), 0, zoom ? 0.34 : 1, H);
+    }
+    for (const { e, p } of pos) {
+      const col = e.t === "N" ? (e.gk ? COL.gkN : COL.norte) : (e.gk ? COL.gkS : COL.sur);
+      ctx.fillStyle = "rgba(0,0,0,.3)";
+      ctx.beginPath(); ctx.ellipse(p.x + 1, p.y + 1.2, 3, 2, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = col; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      if (e.fall !== undefined && t >= e.fall) ctx.ellipse(p.x + 1, p.y, 4.6, 2.2, 0.35, 0, 7);
+      else ctx.arc(p.x, p.y, 3, 0, 7);
+      ctx.fill(); ctx.stroke();
+      if (e.arm) {
+        // brazo pegado al costado, del lado del balón
+        ctx.strokeStyle = COL.arm; ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.moveTo(p.x - 3.4, p.y - 2); ctx.lineTo(p.x - 3.4, p.y + 1.6); ctx.stroke();
+      }
+    }
+    const b = at(inc.ball, t);
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.arc(b.x + 0.8, b.y + 0.8, 1.5, 0, 7); ctx.fill();
+    ctx.fillStyle = COL.ball; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.arc(b.x, b.y, 1.6, 0, 7); ctx.fill(); ctx.stroke();
+  }
+
+  // Grada para la cámara lateral (fija)
+  const CROWD = (() => {
+    let s = 7;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    const cols = ["#7cc4f0", "#7cc4f0", "#f07a5a", "#cfd6da", "#3b4a5c", "#566a7e"];
+    const out = [];
+    for (let y = 14; y < 104; y += 6) for (let x = 0; x < W; x += 5) out.push([x + rnd() * 3, y + rnd() * 3, cols[(rnd() * cols.length) | 0]]);
+    return out;
+  })();
+
+  function drawSide(ctx, inc, t, zoom) {
+    const G = 172;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#1a2330"; ctx.fillRect(0, 0, W, H);
+    for (const [x, y, c] of CROWD) { ctx.fillStyle = c; ctx.fillRect(x, y, 2, 2); }
+    for (let x = 0; x < W; x += 40) { ctx.fillStyle = (x / 40) % 2 ? "#243b56" : COL.amber; ctx.fillRect(x, 108, 40, 12); }
+    for (let x = 0; x < W; x += 20) { ctx.fillStyle = (x / 20) % 2 ? COL.pitch2 : COL.pitch; ctx.fillRect(x, 120, 20, H - 120); }
+    if (zoom) {
+      const s = 2.5;
+      ctx.setTransform(s, 0, 0, s, Math.round(W / 2 - inc.side.focus * s), Math.round(H / 2 + 30 - (G - 18) * s));
+    }
+    for (const f of inc.side.figs) drawFigure(ctx, f, at(f.k, t).x, f.pose(t), G);
+    const b = at(inc.side.ball, t);
+    ctx.fillStyle = COL.ball; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.arc(b.x, G - 2.5 - b.y, 2.5, 0, 7); ctx.fill(); ctx.stroke();
+  }
+
+  function drawFigure(ctx, f, x, pose, G) {
+    const L = 18, T = 17, R = 4.5, d = f.dir, rad = Math.PI / 180;
+    ctx.save();
+    ctx.translate(x, G);
+    ctx.fillStyle = "rgba(0,0,0,.3)";
+    ctx.beginPath(); ctx.ellipse(0, 0, 10, 2, 0, 0, 7); ctx.fill();
+    if (pose.fall) ctx.rotate(d * pose.fall * 1.35);
+    const hipY = pose.slide ? -5 : -L + 1;
+    const leg = a => [d * Math.sin(a * rad) * L, hipY + Math.cos(a * rad) * L];
+    ctx.lineCap = "round";
+    // piernas
+    ctx.strokeStyle = "#e3c9a8"; ctx.lineWidth = 2.6;
+    const fB = leg(pose.legB), fF = leg(pose.legF);
+    ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(...fB); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(...fF); ctx.stroke();
+    // botas
+    ctx.fillStyle = "#111";
+    for (const [fx, fy] of [fB, fF]) ctx.fillRect(fx - 2, fy - 1.5, 4, 3);
+    if (pose.studs) {
+      // tacos visibles: suela mirando al rival
+      ctx.fillStyle = "#d8d8d8";
+      const a = pose.legF * rad, nx = d * Math.cos(a), ny = -Math.sin(a);
+      for (const k of [-1.6, 0, 1.6]) ctx.fillRect(fF[0] + d * Math.sin(a) * 2 + nx * k - 0.5, fF[1] + Math.cos(a) * 2 + ny * k - 0.5, 1.2, 1.2);
+    }
+    // tronco
+    const lean = (pose.lean || 0) * rad;
+    const sx = d * Math.sin(lean) * T, sy = hipY - Math.cos(lean) * T;
+    ctx.strokeStyle = f.c; ctx.lineWidth = 5.5;
+    ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(sx, sy); ctx.stroke();
+    // brazos
+    ctx.strokeStyle = "#e3c9a8"; ctx.lineWidth = 2;
+    const arm = pose.armsUp ? [d * 6, -11] : [-d * 5, 10];
+    ctx.beginPath(); ctx.moveTo(sx, sy + 1); ctx.lineTo(sx + arm[0], sy + arm[1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy + 1); ctx.lineTo(sx - arm[0] * 0.6, sy + Math.abs(arm[1])); ctx.stroke();
+    // cabeza
+    ctx.fillStyle = "#e3c9a8"; ctx.strokeStyle = COL.dark; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.arc(sx + d * Math.sin(lean) * (R + 1), sy - Math.cos(lean) * (R + 1), R, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------- Arranque (conserva la partida si la página se actualiza) ----------
+  window.claude?.hot?.snapshot?.(() => ({ state }));
+  const start = data => { if (data && data.state) state = data.state; render(); };
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
