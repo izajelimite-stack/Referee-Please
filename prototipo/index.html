@@ -125,6 +125,42 @@
   .meterset { display: flex; flex-wrap: wrap; gap: 10px 20px; }
   .meter label i { font-style: normal; text-transform: none; letter-spacing: 0; opacity: .75; }
   .meter.warn label { color: var(--bad); }
+  /* Franja de ambiente: grada y jugadores, separada de los árbitros */
+  .ambient { list-style: none; margin: 0; padding: 8px 12px; background: #0b1013; border: 1px solid var(--line); display: grid; gap: 2px;
+    font-family: var(--f-mono); font-size: 17px; line-height: 1.15; min-height: calc(3 * 1.15em + 16px); }
+  .ambient li { opacity: .55; }
+  .ambient li.now { opacity: 1; font-size: 20px; }
+  .ambient .info { color: var(--muted); } .ambient .crowd { color: var(--sur); } .ambient .warn { color: var(--bad); } .ambient .you { color: var(--good); }
+  /* Acta de la jugada: papel, como la carta del comité */
+  .acta { background: #e9e4d6; color: #1f1c16; padding: 16px 18px; display: grid; gap: 12px; box-shadow: 0 3px 0 #a79f8a; }
+  .acta-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1f1c16; padding-bottom: 6px; }
+  .acta-head span { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #6d6555; font-weight: 600; }
+  .acta-head b { font-family: var(--f-display); font-size: 22px; }
+  .acta-lead { font-family: var(--f-display); font-size: 19px; line-height: 1.2; margin: 0; }
+  .acta-hint { font-size: 14px; color: #6d6555; margin: 0; }
+  .acta-actions, .consult, .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opts { flex-direction: column; }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: st; }
+  ol.steps > li { counter-increment: st; display: grid; gap: 6px; }
+  ol.steps h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #4d473b; display: flex; gap: 8px; align-items: center; }
+  ol.steps h3::before { content: counter(st); display: inline-grid; place-items: center; width: 20px; height: 20px; background: #1f1c16; color: #e9e4d6; font-family: var(--f-mono); font-size: 16px; }
+  ol.steps p { margin: 0; font-size: 16px; }
+  .pbtn { font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; background: #f6f2e7; color: #1f1c16; border: 1px solid #b8b09a; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
+  .pbtn:hover:not(:disabled) { border-color: #1f1c16; }
+  .pbtn:disabled { opacity: .45; cursor: default; }
+  .pbtn:focus-visible { outline: 2px solid #1f1c16; outline-offset: 2px; }
+  .pbtn.primary { background: var(--amber); border-color: #b07800; justify-self: start; }
+  .pbtn.var { border-color: #b07800; color: #6e4a00; }
+  .pbtn.src { border-left-width: 5px; }
+  .s-asistente { border-left-color: #3f86b8 !important; } .s-cuarto { border-left-color: #7a57a8 !important; } .s-var { border-left-color: #b07800 !important; }
+  .pbtn .card { width: 12px; height: 16px; flex: none; border: 1px solid rgba(0,0,0,.4); }
+  .notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .notes li { background: #f6f2e7; border-left: 5px solid #8a826e; padding: 6px 10px; font-family: var(--f-mono); font-size: 19px; line-height: 1.1; }
+  .notes b { display: block; font-family: var(--f-body); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+  .notes .n-asistente { border-left-color: #3f86b8; } .notes .n-asistente b { color: #2b5f8a; }
+  .notes .n-cuarto { border-left-color: #7a57a8; } .notes .n-cuarto b { color: #5a3a88; }
+  .notes .n-var { border-left-color: #b07800; } .notes .n-var b { color: #7a5200; }
+  .sidefoot { display: grid; gap: 10px; }
   details.rules { background: var(--panel); border: 1px solid var(--line); }
   details.rules summary { cursor: pointer; padding: 10px 12px; font-weight: 600; }
   details.rules ul { margin: 0; padding: 0 14px 12px 30px; display: grid; gap: 6px; font-size: 15px; }
@@ -463,7 +499,7 @@
     const y6 = yA + (100 - yA) * 0.4, y8 = yA + (100 - yA) * 0.75, top = R(30, 60), bot = R(140, 170);
     const cm = Math.round(Math.abs(m) * 18);
     return {
-      title: "Pase al hueco", infraction: off, goalClip: true,
+      seen: `Pase al hueco para el ${s}, que se queda solo delante del portero y marca.`, title: "Pase al hueco", infraction: off, goalClip: true,
       post: [["GRADA", atk === "N" ? "¡¡GOOOL!!" : "Silencio... gol del visitante."]],
       hint: ["ASISTENTE", say(off ? `¡Bandera arriba! El ${s} está en fuera.` : "Bandera abajo. Para mí está habilitado.",
         off ? "Bandera abajo. Para mí está habilitado." : `¡Bandera arriba! El ${s} está en fuera.`, `No he visto bien la posición del ${s}.`)],
@@ -511,7 +547,7 @@
     const Bc = pen ? { x: C.x + a.x * 3, y: C.y + a.y * 3 } : C;
     const Au = k => [Ac.x + a.x * k, Ac.y + a.y * k];
     return {
-      title: "Entrada en el área", infraction: !clean, goalClip: false,
+      seen: `El ${f} entra en el área y el ${dd} se tira al suelo a por el balón.`, title: "Entrada en el área", infraction: !clean, goalClip: false,
       hint: ["ASISTENTE", say(pen ? "¡Penalti! Se lo ha llevado por delante." : sim ? `Para mí el ${f} se ha tirado.` : "Ha ido al balón. Limpia.",
         pen ? `Para mí el ${f} se ha tirado.` : "¡Penalti! Se lo ha llevado por delante.", "No sé si hay contacto.")],
       varHint: ["SALA VAR", say(pen ? "Revisa: hay contacto." : sim ? "Revisa: el defensor toca balón." : "Nada que revisar.",
@@ -555,7 +591,7 @@
     const C = { x: P.x + u.x * (loc[0] + 0.6) + v.x * loc[1], y: P.y + u.y * (loc[0] + 0.6) + v.y * loc[1] };
     const y9 = P.y + R(-14, 14);
     return {
-      title: "Centro al área", infraction: open, goalClip: false,
+      seen: `Centro al área. El balón le pega al ${dd} en la zona del brazo.`, title: "Centro al área", infraction: open, goalClip: false,
       hint: ["ASISTENTE", say(open ? "¡Mano, con el brazo abierto!" : "Le ha dado, pero tenía el brazo pegado.",
         open ? "Le ha dado, pero tenía el brazo pegado." : "¡Mano, con el brazo abierto!", `Creo que le ha dado al ${dd} en el brazo.`)],
       varHint: ["SALA VAR", say(open ? "Revisa: brazo separado del cuerpo." : "Nada punible, brazo pegado.",
@@ -596,7 +632,7 @@
     const kick = clean ? { t0: 0.4, t1: 0.5, t2: 0.62, h: 0.4, target: "ball", studs: false }
       : { t0: 0.4, t1: 0.5, t2: 0.62, h: high ? 6.2 : sev === "roja" ? 2.6 : 0.7, target: atk + v10, studs: sev !== "amarilla" };
     return {
-      title: "Entrada en el medio campo", infraction: !clean, severe: sev === "roja" || high, goalClip: false,
+      seen: `El ${f} le sale al ${v10} con una entrada fuerte.`, title: "Entrada en el medio campo", infraction: !clean, severe: sev === "roja" || high, goalClip: false,
       hint: ["ASISTENTE", say(sev === "roja" || high ? "¡Con los tacos! Eso es roja." : sev === "amarilla" ? "Llega tarde. Amarilla." : "Ha ido al balón. Limpia.",
         sev === "roja" || high ? "Fuerte, pero amarilla." : sev === "amarilla" ? "Ha ido al balón. Limpia." : "Llega tarde. Amarilla.", `Entrada fuerte del ${f}.`)],
       varHint: ["SALA VAR", say(sev === "roja" || high ? "Revisa: posible roja directa." : "Nada grave para nosotros.",
@@ -633,7 +669,7 @@
     const S = { x: R(185, 210), y: R(85, 115) }, gy = R(90, 110), high = chance(0.5);
     const Dp = { x: R(248, 262), y: R(95, 125) };
     return {
-      title: "Disparo desde fuera", infraction: push, goalClip: true,
+      seen: `Gol desde fuera del área. Mientras, en el área, el ${p9} estaba pegado al ${v5}.`, title: "Disparo desde fuera", infraction: push, goalClip: true,
       post: [["GRADA", atk === "N" ? "¡¡GOLAZO!!" : "Golazo del visitante... silencio."]],
       hint: ["ASISTENTE", say(push ? `Ojo, antes del disparo el ${v5} se ha ido al suelo.` : "Nada raro. Gol limpio.",
         push ? "Nada raro. Gol limpio." : `Ojo, antes del disparo el ${v5} se ha ido al suelo.`, "¡Qué golazo!")],
@@ -680,7 +716,7 @@
         pl(def, agg, [[0, Q.x - 1, Q.y + (kind === "codo" ? 2.6 : 3.2)], [0.54, Q.x + 7, Q.y + (kind === "codo" ? 2.6 : 3.2)], [1, Q.x + 13, Q.y + 3.4]],
           kind === "codo" ? { elbow: { t0: 0.44, t1: 0.52, target: atk + vic } } : {})];
     return {
-      title: "Lejos del balón", infraction: hit, severe: hit, goalClip: false,
+      seen: `Mientras el balón circula, algo pasa entre el ${agg} y el ${vic}.`, title: "Lejos del balón", infraction: hit, severe: hit, goalClip: false,
       hint: ["ASISTENTE", say(hit ? `¡El ${agg} le ha dado ${what} al ${vic}!` : "Forcejeo normal, nada.",
         hit ? "Forcejeo normal, nada." : `¡El ${agg} le ha dado ${what} al ${vic}!`, "Estaba mirando el balón, no lo he visto.")],
       varHint: ["SALA VAR", say(hit ? "Revisa: posible agresión lejos del balón." : "Nada punible.",
@@ -722,7 +758,7 @@
     const lift = hand ? 0.9 : 1.9;
     const C = { x: A.x + u.x * 1.35, y: A.y + u.y * 1.35 }, zc = hand ? 10.9 : 9.4 + lift - 0.35;
     return {
-      title: "Balón aéreo en el área", infraction: hand, goalClip: true,
+      seen: `El ${s} y el portero saltan a la vez y el balón acaba en la red.`, title: "Balón aéreo en el área", infraction: hand, goalClip: true,
       post: [["GRADA", atk === "N" ? "¡¡GOOOL!!" : "Silencio... gol del visitante."]],
       hint: ["ASISTENTE", say(hand ? `¡Ha sido con la mano! Lo ha metido con la mano el ${s}.` : "Cabezazo limpio. Gol.",
         hand ? "Cabezazo limpio. Gol." : `¡Ha sido con la mano! Lo ha metido con la mano el ${s}.`, "El portero me tapaba, no lo he visto.")],
@@ -764,7 +800,7 @@
     const xb = inGoal ? R(305.1, 306.3) : R(303.4, 304.4);
     const cm = Math.round(Math.abs(xb - 304.65) * 18);
     return {
-      title: "Disparo al larguero", infraction: true, goalClip: true, question: "¿Ha entrado el balón?",
+      seen: `El disparo del ${sh} da en el larguero y bota junto a la línea de gol.`, title: "Disparo al larguero", infraction: true, goalClip: true, question: "¿Ha entrado el balón?",
       post: [["GRADA", "¡¡Ha entrado!! ¡¡Ha entrado!!"], ["GRADA", "¡Nooo! ¡Fuera, fuera!"]],
       hint: ["ASISTENTE", say(inGoal ? "Desde aquí ha botado dentro." : "No ha entrado entero, ha botado en la línea.",
         inGoal ? "No ha entrado entero, ha botado en la línea." : "Desde aquí ha botado dentro.", "Uf... no lo sé. Muy justo.")],
@@ -805,7 +841,7 @@
     const C = hands ? { x: P.x + u.x * 1.2 + v.x * sg * 0.85, y: P.y + u.y * 1.2 + v.y * sg * 0.85 } : { x: P.x + u.x * 0.85, y: P.y + u.y * 0.85 };
     const zc = hands ? 9.15 : 9.55;
     return {
-      title: "Cabezazo en un córner", infraction: hands, severe: hands, goalClip: false,
+      seen: `Cabezazo del ${hd} que el ${dl} saca en la misma línea.`, title: "Cabezazo en un córner", infraction: hands, severe: hands, goalClip: false,
       hint: ["ASISTENTE", say(hands ? `¡Mano del ${dl} en la línea! ¡Iba dentro!` : `Lo ha sacado de cabeza el ${dl}.`,
         hands ? `Lo ha sacado de cabeza el ${dl}.` : `¡Mano del ${dl} en la línea! ¡Iba dentro!`, "Había mucha gente, no lo he visto.")],
       varHint: ["SALA VAR", say(hands ? "Revisa: posible mano en la línea de gol." : "Despeje de cabeza. Nada.",
@@ -840,7 +876,7 @@
     const c = num(atk), f = num(atk), d1 = num(def), d2 = num(def);
     const side = chance(0.5) ? 1 : -1, C = { x: 297, y: 100 + side * R(18, 24) };
     return {
-      title: "Falta lateral", infraction: hand, goalClip: true,
+      seen: `El ${c} controla un balón junto a la línea de fondo y da el pase del gol.`, title: "Falta lateral", infraction: hand, goalClip: true,
       post: [["GRADA", atk === "N" ? "¡¡GOOOL!!" : "Silencio... gol del visitante."], ["GRADA", "¡¡Mano, mano!!"]],
       hint: ["ASISTENTE", say(hand ? `¡El ${c} la ha bajado con la mano antes del pase!` : `El ${c} la ha controlado con el muslo. Limpio.`,
         hand ? `El ${c} la ha controlado con el muslo. Limpio.` : `¡El ${c} la ha bajado con la mano antes del pase!`, `No he visto bien el control del ${c}.`)],
@@ -888,7 +924,7 @@
       { label: "Nada: saque de banda", grade: "wrong", fav: "def", mag: 6 }
     ];
     return {
-      title: "Balón parado junto a la banda", infraction: true, goalClip: true, question: "¿Qué decides?",
+      seen: `Con el juego parado, el ${kk} le lanza el balón al ${vic}, que cae al suelo.`, title: "Balón parado junto a la banda", infraction: true, goalClip: true, question: "¿Qué decides?",
       post: [["GRADA", "¡¡Fuera, fuera!! ¡Expulsión!"]],
       hint: ["ASISTENTE", say(faked ? `Le ha dado en la pierna y se agarra la cara. Teatro del ${vic}.` : `¡Le ha reventado el balón en la cara al ${vic}!`,
         faked ? `¡Le ha reventado el balón en la cara al ${vic}!` : `Le ha dado en la pierna y se agarra la cara. Teatro del ${vic}.`, "No sé dónde le ha dado.")],
@@ -920,7 +956,7 @@
     const A = { x: 285, y: y0 }, B = { x: 285.8, y: y0 };
     const G = brutal ? { x: A.x + 4, y: A.y + side * 0.6 } : { x: B.x + 3.4, y: B.y };
     return {
-      title: "Mano a mano con el portero", infraction: brutal, severe: brutal, goalClip: false,
+      seen: `El portero sale a por el ${st} y chocan con fuerza.`, title: "Mano a mano con el portero", infraction: brutal, severe: brutal, goalClip: false,
       hint: ["ASISTENTE", say(brutal ? "¡El portero se lo ha llevado por delante! ¡Ni ha tocado el balón!" : "El portero ha ido al balón. Limpio.",
         brutal ? "El portero ha ido al balón. Limpio." : "¡El portero se lo ha llevado por delante! ¡Ni ha tocado el balón!", "Choque durísimo... no sé.")],
       varHint: ["SALA VAR", say(brutal ? "Revisa la salida del portero: posible roja." : "El portero toca balón. Nada.",
@@ -954,7 +990,7 @@
     const p1 = num(atk), p2 = num(atk), p3 = num(atk), da = num(def), db = num(def), duel = num(atk);
     const B0 = { x: R(120, 230), y: R(60, 140) }, P2 = { x: B0.x + 22, y: B0.y + R(-20, 20) }, P3 = { x: P2.x + 18, y: P2.y + R(-18, 18) };
     return {
-      title: "Juego sin incidencias", infraction: false, goalClip: false,
+      seen: `El ${duel} y el ${da} chocan hombro con hombro.`, title: "Juego sin incidencias", infraction: false, goalClip: false,
       hint: ["ASISTENTE", "Todo normal."], varHint: ["SALA VAR", "Nada que revisar."],
       events: [[0.4, "Choque"]],
       focus: atk + duel,
@@ -1462,7 +1498,8 @@
   }
 
   // ---------- Partido rápido: flujo con silbato ----------
-  // Fases de cada jugada: intro → playing → (whistled | goal | varcall | flow) → decided
+  // Fases de cada jugada: intro → playing → deliberate → (whistled | goal | varcall | flow) → decided
+  // Al pitar se abre el acta: 1) lo que has visto, 2) consulta a otros árbitros, 3) decisión.
   const METERS = [
     ["comite", "Comité", "confianza en ti", "var(--good)"],
     ["local", "Grada local", "enfado", "var(--sur)"],
@@ -1475,21 +1512,37 @@
     temp: ["TÁNGANA", "Los jugadores se lían a golpes en una tángana general. Partido suspendido."],
     comite: ["RELEVADO", "El delegado del comité te releva al descanso. No vuelves a salir al campo."]
   };
+  // A quién puedes consultar antes de decidir
+  const SOURCES = [["asistente", "Asistente"], ["cuarto", "Cuarto árbitro"], ["var", "Sala VAR"]];
 
-  function newCur() { return { phase: "intro", varOpen: false, whistled: false, whistleT: null, opts: null }; }
+  function newCur() { return { phase: "intro", varOpen: false, whistled: false, whistleT: null, opts: null, notes: [], asked: {} }; }
+
+  // Franja de ambiente: grada, jugadores y lo que haces tú. Separada de lo que dicen los árbitros.
+  function amb(txt, tone = "info") {
+    state.amb = (state.amb || []).concat([[tone, txt]]).slice(-6);
+    renderAmbient();
+  }
+  function renderAmbient() {
+    const el = $("#ambient");
+    if (!el) return;
+    const list = (state.amb || []).slice(-3).reverse();
+    el.innerHTML = list.map(([tone, txt], i) => `<li class="${tone}${i ? "" : " now"}">${esc(txt)}</li>`).join("");
+  }
 
   function startQuickMatch() {
     KIT = teamsOf(state).kits;
     state.clips = [generateClip(state, 0)];
     INCIDENTS = state.clips;
     state.idx = 0; state.cur = newCur();
-    state.log = [["ASISTENTE", "Empieza el partido. Si ves algo, pita. Si no, deja jugar."]];
+    state.amb = [];
     state.screen = "match";
     render();
+    amb("Empieza el partido. El estadio está lleno.");
   }
 
   function renderMatch() {
     const inc = INCIDENTS[state.idx], c = state.cur;
+    c.notes = c.notes || []; c.asked = c.asked || {};
     if (c.phase === "playing") c.phase = "intro"; // una jugada a medias al volver: se ve desde el principio
     screen.innerHTML = `
       <section class="stage">
@@ -1501,6 +1554,7 @@
             ${c.phase === "intro" ? `<button class="playover" id="playBtn">${state.idx === 0 ? "▶ Empezar el partido" : "▶ Minuto " + inc.minute + "'"}</button>` : ""}
             <div class="ask" id="ask" hidden>¿PITAS?<b id="askN"></b></div>
           </div>
+          <ul class="ambient" id="ambient" aria-live="polite"></ul>
           <button class="whistle" id="whistle" ${["intro", "playing", "deliberate"].includes(c.phase) ? "" : "disabled"}>¡PITAR! <small id="wsub">barra espaciadora</small></button>
           <div class="varbar" id="varbar" ${c.varOpen ? "" : "hidden"}>
             <div class="row">
@@ -1524,17 +1578,14 @@
           </div>
         </div>
         <aside class="side">
-          <div class="case">
-            <p class="eyebrow">Jugada ${state.idx + 1} de ${CLIPS_PER_MATCH}</p>
-            <h2>Minuto ${inc.minute}'</h2>
+          <div class="acta" id="acta"></div>
+          <div class="sidefoot">
+            <div class="cardsbox" id="cardsbox"></div>
+            ${RULES}
           </div>
-          <ol class="log" id="log" aria-live="polite"></ol>
-          <div class="decide" id="decide"></div>
-          <div class="cardsbox" id="cardsbox"></div>
-          ${RULES}
         </aside>
       </section>`;
-    renderLog();
+    renderAmbient();
     renderMatchPanel();
     renderCards();
     wireVar();
@@ -1559,7 +1610,7 @@
     const tm = teamsOf(state);
     const list = Object.entries(state.cards).filter(([, n]) => n > 0);
     el.innerHTML = `<h3>Tarjetas</h3>` + (list.length
-      ? `<ul>${list.map(([id, n]) => `<li><span class="card ${n >= 2 ? "r" : "y"}"></span>${esc(tm[id[0]][1])} ${esc(id.slice(1))}${n >= 2 ? " · expulsado" : ""}</li>`).join("")}</ul>`
+      ? `<ul>${list.map(([id, n]) => `<li><span class="card ${n >= 2 ? "r" : "y"}"></span>${esc(tm[id[0]][1])} ${esc(id.slice(1) === "1" ? "portero" : id.slice(1))}${n >= 2 ? " · fuera" : ""}</li>`).join("")}</ul>`
       : `<p class="hint">Ninguna todavía.</p>`);
   }
 
@@ -1568,35 +1619,74 @@
     return c.opts === "end" ? inc.endOpts : (inc.wOpts || inc.endOpts);
   }
 
+  // Respuesta del cuarto árbitro: ve bien lo que pasa cerca de los banquillos, peor lo de las áreas
+  function fourthSays(inc) {
+    const good = ["offball", "theatre", "tackle", "keeper", "filler"].includes(inc.type) ? 0.7 : 0.4, x = Math.random();
+    const t = inc.truth.charAt(0).toLowerCase() + inc.truth.slice(1);
+    if (x < good) return inc.infraction ? `Yo lo he visto claro: ${t}.` : "Para mí no había nada.";
+    if (x < good + 0.25) return inc.infraction ? "Para mí no había nada." : "Yo creo que ahí hay algo.";
+    return "Desde el banquillo no lo he visto bien.";
+  }
+
+  function consult(src) {
+    const c = state.cur, inc = INCIDENTS[state.idx];
+    if (c.asked[src]) return;
+    c.asked[src] = true;
+    const txt = src === "asistente" ? inc.hint[1] : src === "var" ? inc.varHint[1] : fourthSays(inc);
+    c.notes.push([src, txt]);
+    bump("local", 2); bump("visit", 2);
+    if (Object.keys(c.asked).length === 2) amb("La grada pita mientras hablas con tus compañeros.", "crowd");
+    renderHud();
+    renderMatchPanel();
+  }
+
+  const OPT_CARD = o => { const k = [].concat(o.cardTo || [])[0]; return k ? (k.kind === "R" ? "r" : "y") : o.goal ? "g" : "w"; };
+
   function renderMatchPanel() {
     save();
-    const c = state.cur, el = $("#decide"), inc = INCIDENTS[state.idx];
+    const c = state.cur, el = $("#acta"), inc = INCIDENTS[state.idx];
     if (!el) return;
-    const varBtn = !c.varOpen && state.varLeft > 0 ? `<button class="btn var" id="varBtn">Pedir VAR (quedan ${state.varLeft})</button>` : "";
-    if (c.phase === "intro" || c.phase === "playing" || c.phase === "flow") {
-      el.innerHTML = `<p class="hint">Observa. Si ves una infracción, pita. Si no, deja jugar.</p>`;
+    const head = `<div class="acta-head"><span>Acta · Jugada ${state.idx + 1} de ${CLIPS_PER_MATCH}</span><b>${inc.minute}'</b></div>`;
+    const notes = c.notes.length ? `<ul class="notes">${c.notes.map(([src, txt]) => `<li class="n-${src}"><b>${esc(SOURCES.find(s => s[0] === src)[1])}</b>${esc(txt)}</li>`).join("")}</ul>` : "";
+    if (["intro", "playing", "flow"].includes(c.phase)) {
+      el.innerHTML = `${head}<p class="acta-lead">Observa la jugada.</p><p class="acta-hint">Si ves una infracción, pita. Si no, deja jugar.</p>`;
     } else if (c.phase === "deliberate") {
-      el.innerHTML = `<p class="hint">¿Has visto algo? Tienes unos segundos para pitar.</p><button class="btn" id="letPlay">Dejar seguir →</button>`;
+      el.innerHTML = `${head}<p class="acta-lead">¿Has visto algo?</p><p class="acta-hint">Tienes unos segundos para pitar.</p>
+        <button class="pbtn" id="letPlay">Dejar seguir →</button>`;
       $("#letPlay").onclick = endDeliberation;
     } else if (c.phase === "varcall") {
-      el.innerHTML = `
-        <h3>La sala VAR te llama</h3>
-        ${state.varLeft > 0 ? `<button class="btn var" id="goVar">Ir al monitor (quedan ${state.varLeft})</button>` : `<p class="hint">No te quedan revisiones.</p>`}
-        <button class="btn" id="keepPlay">Mantener: sigue el juego</button>`;
+      el.innerHTML = `${head}<p class="acta-lead">La sala VAR te llama.</p>${notes}
+        <div class="acta-actions">
+          ${state.varLeft > 0 ? `<button class="pbtn var" id="goVar">Ir al monitor (quedan ${state.varLeft})</button>` : `<p class="acta-hint">No te quedan revisiones.</p>`}
+          <button class="pbtn" id="keepPlay">Mantener: sigue el juego</button>
+        </div>`;
       const gv = $("#goVar");
       if (gv) gv.onclick = () => { c.opts = "w"; c.phase = "whistled"; openVarQ(); };
-      $("#keepPlay").onclick = () => { applyOutcome({ label: "Sin pitar", ...inc.noWhistle }, "Mantienes tu decisión. Sigue el juego."); };
+      $("#keepPlay").onclick = () => applyOutcome({ label: "Sin pitar", ...inc.noWhistle }, "Mantienes tu decisión: sigue el juego.");
     } else if (c.phase === "whistled" || c.phase === "goal") {
-      el.innerHTML = `
-        <h3>${c.phase === "goal" ? (inc.question || "¿Vale el gol?") : "¿Qué pitas?"}</h3>
-        ${optsList().map((o, i) => `<button class="btn opt" data-opt="${i}"><span class="card ${o.cardTo ? (o.cardTo.kind === "R" ? "r" : "y") : o.goal ? "g" : "w"}"></span>${esc(o.label)}</button>`).join("")}
-        ${varBtn}`;
+      el.innerHTML = `${head}
+        <ol class="steps">
+          <li><h3>Lo que has visto</h3><p>${esc(inc.seen || inc.title)}</p></li>
+          <li><h3>Consulta</h3>
+            <div class="consult">
+              ${SOURCES.map(([k, l]) => `<button class="pbtn src s-${k}" data-src="${k}" ${c.asked[k] ? "disabled" : ""}>${l}</button>`).join("")}
+              ${!c.varOpen ? `<button class="pbtn var" id="varBtn" ${state.varLeft > 0 ? "" : "disabled"}>Revisar en el monitor (${state.varLeft})</button>` : ""}
+            </div>
+            ${notes || `<p class="acta-hint">Preguntar hace esperar a la grada.</p>`}
+          </li>
+          <li><h3>${c.phase === "goal" ? (inc.question || "¿Vale el gol?") : "¿Qué pitas?"}</h3>
+            <div class="opts">${optsList().map((o, i) => `<button class="pbtn opt" data-opt="${i}"><span class="card ${OPT_CARD(o)}"></span>${esc(o.label)}</button>`).join("")}</div>
+          </li>
+        </ol>`;
+      el.querySelectorAll("[data-src]").forEach(b => b.onclick = () => consult(b.dataset.src));
       el.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => applyOutcome(optsList()[+b.dataset.opt]));
       const vb = $("#varBtn");
       if (vb) vb.onclick = openVarQ;
     } else if (c.phase === "decided") {
       const last = state.idx >= CLIPS_PER_MATCH - 1 || state.over;
-      el.innerHTML = `<button class="btn primary" id="next">${last ? "Ver el informe del comité →" : "Reanudar el partido →"}</button>`;
+      const d = state.decisions[state.decisions.length - 1];
+      el.innerHTML = `${head}<p class="acta-hint">Tu decisión</p><p class="acta-lead">${esc(d ? d.label : "")}</p>
+        <button class="pbtn primary" id="next">${last ? "Ver el informe del comité →" : "Reanudar el partido →"}</button>`;
       $("#next").onclick = nextClip;
     }
   }
@@ -1626,9 +1716,7 @@
     stopDeliberation();
     c.phase = "whistled"; c.whistled = true; c.whistleT = view.t; c.opts = inc.wOpts ? "w" : "end";
     $("#whistle").disabled = true;
-    say("TÚ", "¡Piiiii! Paras el juego.");
-    say(...inc.hint);
-    say(...inc.varHint);
+    amb("¡Piiiii! Paras el juego.", "you");
     renderMatchPanel();
   }
 
@@ -1637,8 +1725,7 @@
     $("#whistle").disabled = true;
     if (inc.goalClip) {
       c.phase = "goal"; c.opts = "end";
-      (inc.post || []).forEach(m => say(...m));
-      say(...inc.hint); say(...inc.varHint);
+      (inc.post || []).forEach(m => amb(m[1], "crowd"));
       renderMatchPanel();
       return;
     }
@@ -1678,7 +1765,7 @@
     // Si se te escapa algo, a veces la sala VAR te avisa (y a veces se equivoca)
     if (Math.random() < (inc.infraction ? (inc.severe ? 0.55 : 0.35) : 0.07)) {
       c.phase = "varcall";
-      say("SALA VAR", "¡Espera! Revisa la jugada, puede haber algo.");
+      c.notes.push(["var", "¡Espera! Revisa la jugada, puede haber algo."]);
       renderMatchPanel();
       return;
     }
@@ -1692,8 +1779,7 @@
     state.varLeft--;
     bump("local", 4); bump("visit", 4);
     c.varOpen = true;
-    say("TÚ", "Me voy al monitor.");
-    say("GRADA", "Uuuuuh... (la grada se impacienta)");
+    amb("Te vas al monitor. La grada se impacienta.", "crowd");
     renderHud();
     renderMatch();
   }
@@ -1719,42 +1805,39 @@
     if (grade === "wrong" && inc.infraction) bump("temp", inc.severe ? 20 : 12);
     if (grade === "correct") bump("temp", o.cardTo ? -12 : inc.infraction ? -5 : 0);
     if (c.whistled && !inc.infraction) bump("temp", 3);
-    // tarjetas
+    // relato en la franja de ambiente
+    if (silent) amb("Sigue, sigue.", "you");
+    else amb(note || o.label + ".", "you");
     for (const ct of [].concat(o.cardTo || [])) {
       const id = ct.t + ct.n, had = state.cards[id] || 0, who = ct.n === 1 ? "portero" : ct.n;
-      if (ct.kind === "R") { state.cards[id] = 2; say("TÚ", `Roja al ${who} del ${tm[ct.t][2]}. A la calle.`); }
-      else if (had === 1) { state.cards[id] = 2; say("TÚ", `Segunda amarilla al ${who} del ${tm[ct.t][2]}: expulsado.`); }
+      if (ct.kind === "R") { state.cards[id] = 2; amb(`Roja al ${who} del ${tm[ct.t][2]}. A la calle.`, "you"); }
+      else if (had === 1) { state.cards[id] = 2; amb(`Segunda amarilla al ${who} del ${tm[ct.t][2]}: expulsado.`, "you"); }
       else { state.cards[id] = 1; }
     }
     if (o.goal) {
       state.score[inc.atk]++;
       bump(inc.atk === "N" ? "local" : "visit", -10);
     }
-    // relato
-    if (silent) say("TÚ", "Sigue, sigue.");
-    else if (note) say("TÚ", note);
-    else say("TÚ", o.label + ".");
     if (!silent) {
       const fav = o.fav ? (o.fav === "atk" ? inc.atk : inc.def) : null;
-      say("GRADA", o.goal ? (inc.atk === "N" ? `¡Gol del ${tm.N[2]}! La grada explota.` : `Gol del ${tm.S[2]}. Silencio en el estadio.`)
-        : fav === "N" ? pickMsg(["La grada aplaude.", "Ovación en el estadio."]) : fav === "S" ? pickMsg(["Pitada monumental.", "Te llueven insultos.", "Lanzan un mechero al campo."]) : "El juego se reanuda.");
+      amb(o.goal ? (inc.atk === "N" ? `¡Gol del ${tm.N[2]}! La grada explota.` : `Gol del ${tm.S[2]}. Silencio en el estadio.`)
+        : fav === "N" ? pickMsg(["La grada aplaude.", "Ovación en el estadio."]) : fav === "S" ? pickMsg(["Pitada monumental.", "Te llueven insultos.", "Lanzan un mechero al campo."]) : "El juego se reanuda.", "crowd");
     }
-    if (state.meters.temp >= 70) say("ASISTENTE", "Los jugadores están muy calientes. Cuidado.");
-    if (state.meters.local >= 75) say("GRADA", "La grada local está al borde. Vuelan objetos.");
+    if (state.meters.temp >= 70) amb("Los jugadores están muy calientes. Hay empujones en cada jugada.", "warn");
+    if (state.meters.local >= 75) amb("La grada local está al borde. Vuelan objetos.", "warn");
     // ¿se suspende?
     for (const k of ["local", "visit", "temp"]) if (state.meters[k] >= 100) state.over = k;
     if (state.meters.comite <= 0) state.over = "comite";
     renderHud();
     renderCards();
+    c.phase = "decided";
     if (silent && !state.over) {
-      c.phase = "decided";
       clearTimeout(view.auto);
       view.auto = setTimeout(() => { if (state.screen === "match" && state.cur.phase === "decided") nextClip(); }, RM ? 900 : 700);
       renderMatchPanel();
       return;
     }
-    c.phase = "decided";
-    if (state.over) say("COMITE", GAME_OVER[state.over][1]);
+    if (state.over) amb(GAME_OVER[state.over][1], "warn");
     renderMatchPanel();
   }
   const pickMsg = a => a[(Math.random() * a.length) | 0];
@@ -1768,7 +1851,6 @@
     state.cur = newCur();
     state.extra = 0;
     Object.assign(view, { t: 0, cam: "tribuna", zoom: false, line: false });
-    state.log = state.log.slice(-8);
     render();
   }
 

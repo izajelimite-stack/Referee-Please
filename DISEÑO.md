@@ -123,6 +123,17 @@ pitar y cuándo dejar jugar (como en *Papers, Please*: la mayoría de pasaportes
   (limpia, amarilla o roja), disparo con jugada previa (empujón o limpio), **lejos del balón**
   (codazo o forcejeo) y juego sin incidencias.
 
+**Acta de la jugada (ver → consultar → decidir)**: al pitar, el panel lateral se convierte en
+un acta de papel (el mismo estilo que la carta del comité) con tres pasos:
+1. *Lo que has visto*: una frase neutra de la jugada.
+2. *Consulta*: preguntar al asistente, al cuarto árbitro o a la sala VAR (cada respuesta es una
+   nota con su color; pueden equivocarse) o revisar en el monitor. Cada consulta hace esperar a
+   la grada. El cuarto árbitro ve bien lo de cerca de los banquillos y mal lo de las áreas.
+3. *Decisión*.
+
+**Franja de ambiente**: los gritos de la grada, la temperatura del partido y tus decisiones van
+en una franja bajo la imagen, separados de lo que dicen los árbitros.
+
 **Tiempo para decidir**: las jugadas duran 5 s. Al terminar, la imagen se congela con un
 "¿PITAS?" y 4 s de cuenta atrás; el botón de pitar late. "Dejar seguir" salta la espera.
 
