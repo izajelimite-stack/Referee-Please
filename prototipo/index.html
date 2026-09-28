@@ -125,6 +125,96 @@
   .meterset { display: flex; flex-wrap: wrap; gap: 10px 20px; }
   .meter label i { font-style: normal; text-transform: none; letter-spacing: 0; opacity: .75; }
   .meter.warn label { color: var(--bad); }
+  /* ===== Pantalla de juego (partido rápido) ===== */
+  .game { max-width: 1100px; width: 100%; margin-inline: auto; background: #0b0e12; border: 3px solid #0b0e12; box-shadow: 0 0 0 2px #3d4854; }
+  .scorebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 12px; background: #101418; border-bottom: 2px solid #2a323d; font-family: var(--f-mono); }
+  .sb-score { display: flex; align-items: center; gap: 8px; font-size: 28px; line-height: 1; }
+  .sb-score .t { font-size: 20px; padding: 1px 6px; }
+  .sb-score em { font-style: normal; color: #5d6b78; }
+  .sb-min { font-size: 28px; line-height: 1; color: var(--amber); }
+  .sb-gauges { display: flex; gap: 10px; margin-left: auto; }
+  .gauge { width: 88px; display: grid; gap: 3px; }
+  .gauge span { font-family: var(--f-body); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #5d6b78; }
+  .gauge .trk { display: block; height: 6px; background: #1a1f27; }
+  .gauge i { display: block; height: 100%; background: #3d4854; }
+  .gauge.hot1 span { color: var(--amber); } .gauge.hot1 i { background: var(--amber); }
+  .gauge.hot2 span { color: var(--bad); } .gauge.hot2 i { background: var(--bad); }
+  .sb-cards { display: flex; flex-wrap: wrap; gap: 4px; font-size: 16px; }
+  .mini { padding: 0 4px; color: #0b0e12; } .mini.y { background: #f2c81c; } .mini.r { background: #d8232a; color: #f4f4ee; }
+  .sb-cards .none { color: #5d6b78; font-size: 15px; }
+  .sb-var { display: flex; gap: 3px; align-items: center; font-size: 16px; color: #8a98a4; }
+  .sb-var .pip { display: inline-block; width: 8px; height: 12px; border: 1px solid var(--amber); }
+  .sb-var .pip.on { background: var(--amber); }
+  .sb-rules { font-family: var(--f-mono); font-size: 16px; background: none; border: 1px solid #3d4854; color: #8a98a4; padding: 2px 8px; cursor: pointer; }
+  .view { position: relative; }
+  .view > canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; image-rendering: pixelated; }
+  .view::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); }
+  .view.var { box-shadow: inset 0 0 0 3px var(--amber); }
+  .view .tag { z-index: 2; }
+  .view .tc { z-index: 2; top: 44px; bottom: auto; right: 10px; font-size: 16px; opacity: .8; }
+  .view.var .tag { background: var(--amber); color: var(--amber-ink); }
+  .ticker { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); max-width: 62%; z-index: 2; font-family: var(--f-mono); font-size: 20px; line-height: 1.1; padding: 3px 10px; background: rgba(11,14,18,.78); text-align: center; color: #8a98a4; }
+  .ticker:empty { display: none; }
+  .ticker.crowd, .v-crowd.crowd { color: #f6b39a; } .ticker.warn, .v-crowd.warn { color: #ff5a4a; } .ticker.you, .v-crowd.you { color: #5ad07a; }
+  .view .ask { z-index: 3; }
+  .ov { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 12px; display: grid; gap: 8px; }
+  .ov.bottom { padding: 0; }
+  .ov > .pill { justify-self: center; }
+  .dlg { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start; background: #0b0e12; border: 2px solid #f4f4ee; box-shadow: inset 0 0 0 2px #3d4854; padding: 10px 12px; }
+  .dlg .face { width: 64px; height: 64px; image-rendering: pixelated; border: 2px solid #3d4854; }
+  .dlg-who { font-family: var(--f-display); font-size: 13px; color: var(--amber); }
+  .dlg-text { font-family: var(--f-mono); font-size: 22px; line-height: 1.1; margin: 4px 0 8px; color: #f4f4ee; min-height: 2.2em; }
+  .dlg-actions, .dlg-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dlg-row { justify-content: flex-end; }
+  .pill { font-family: var(--f-display); font-size: 13px; padding: 8px 12px; background: #f4f4ee; color: #0b0e12; border: 0; cursor: pointer; box-shadow: 0 3px 0 #8a98a4; }
+  .pill:hover { background: #fff27a; }
+  .pill:focus-visible, .who:focus-visible, .opt-tile:focus-visible, .whistle-fab:focus-visible { outline: 2px solid #fff27a; outline-offset: 2px; }
+  .pill.amber { background: var(--amber); box-shadow: 0 3px 0 #8a6a14; }
+  .pill.ghost { background: transparent; color: #f4f4ee; box-shadow: inset 0 0 0 2px #5d6b78; }
+  .pill.small { font-size: 11px; padding: 6px 10px; justify-self: start; }
+  .panel { background: rgba(11,14,18,.93); border: 2px solid #f4f4ee; box-shadow: inset 0 0 0 2px #3d4854; padding: 10px 12px; display: grid; gap: 8px; }
+  .panel-title { font-family: var(--f-display); font-size: 16px; margin: 0; color: #f4f4ee; }
+  .panel-hint { margin: 0; font-size: 12px; color: #8a98a4; }
+  .who-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .who { display: grid; justify-items: center; gap: 4px; background: #1a1f27; border: 2px solid #3d4854; padding: 8px 4px; color: #f4f4ee; cursor: pointer; font: 600 12px var(--f-body); }
+  .who:hover:not(:disabled) { border-color: #f2d65c; }
+  .who.sel { border-color: var(--amber); }
+  .who.done span::after { content: " ✓"; color: #5ad07a; }
+  .who:disabled { opacity: .4; cursor: default; }
+  .wface { width: 48px; height: 48px; image-rendering: pixelated; }
+  .tvicon { width: 48px; height: 48px; box-sizing: border-box; border: 4px solid #8a98a4; background: repeating-linear-gradient(0deg, #1f3470 0 3px, #12307a 3px 6px); }
+  .tray-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .opt-tile { display: flex; gap: 10px; align-items: center; text-align: left; background: #1a1f27; color: #f4f4ee; border: 2px solid #3d4854; padding: 10px; cursor: pointer; font: 600 14px var(--f-body); }
+  .opt-tile:hover { border-color: #f2d65c; background: #2a323d; }
+  .icons { display: flex; gap: 4px; flex: none; }
+  .ic { display: inline-block; flex: none; width: 18px; height: 24px; }
+  .ic-y { background: #f2c81c; border: 1px solid #0b0e12; } .ic-r { background: #d8232a; border: 1px solid #0b0e12; }
+  .ic-pen { width: 24px; height: 24px; background: radial-gradient(circle, #f4f4ee 0 3px, #377444 4px); }
+  .ic-goal, .ic-no { width: 26px; height: 20px; border: 3px solid #f4f4ee; border-bottom: 0; background: repeating-linear-gradient(45deg, #5d6b78 0 2px, transparent 2px 5px); }
+  .ic-no { background: linear-gradient(45deg, transparent 44%, #d8232a 44% 58%, transparent 58%), linear-gradient(-45deg, transparent 44%, #d8232a 44% 58%, transparent 58%); }
+  .ic-flag { width: 20px; background: linear-gradient(#f2c81c 0 50%, #d8232a 50%) no-repeat 5px 0 / 15px 12px, linear-gradient(#c8d0d6, #c8d0d6) no-repeat 2px 0 / 3px 24px; }
+  .ic-go { width: 22px; background: #5ad07a; clip-path: polygon(15% 10%, 90% 50%, 15% 90%); }
+  .ic-foul { width: 24px; height: 14px; margin-top: 5px; background: #c8d0d6; border-radius: 7px 2px 2px 7px; }
+  .verdict { justify-self: center; text-align: center; background: rgba(11,14,18,.92); border: 2px solid #f4f4ee; box-shadow: inset 0 0 0 2px #3d4854; padding: 14px 18px; display: grid; gap: 6px; justify-items: center; }
+  .v-label { font-family: var(--f-display); font-size: 20px; margin: 0; color: #f4f4ee; }
+  .v-crowd { margin: 0; font-family: var(--f-mono); font-size: 20px; }
+  .whistle-fab { position: absolute; right: 14px; bottom: 14px; z-index: 4; display: grid; justify-items: center; font-family: var(--f-display); font-size: 18px; padding: 12px 16px; background: var(--live); color: #fff; border: 0; box-shadow: 0 4px 0 #8e1418; cursor: pointer; }
+  .whistle-fab small { font-family: var(--f-mono); font-size: 14px; opacity: .85; }
+  .whistle-fab.hot { background: #ff3b2a; box-shadow: 0 0 0 3px var(--amber), 0 4px 0 #8e1418; animation: pulse .7s ease-in-out infinite alternate; }
+  @media (prefers-reduced-motion: reduce) { .whistle-fab.hot { animation: none; } }
+  .varpanel { background: rgba(11,14,18,.92); border-top: 2px solid var(--amber); padding: 8px; display: grid; gap: 6px; }
+  .varpanel .row { gap: 6px; }
+  .rulesbox { position: absolute; top: 10px; right: 10px; z-index: 5; max-width: min(380px, 90%); background: #0b0e12; border: 2px solid #f4f4ee; padding: 10px 14px; font-size: 14px; color: #e5ebe3; }
+  .rulesbox h3 { margin: 0 0 6px; font-family: var(--f-display); font-size: 14px; }
+  .rulesbox ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  @media (max-width: 640px) {
+    .who-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tray-grid { grid-template-columns: minmax(0, 1fr); }
+    .dlg { grid-template-columns: 44px minmax(0, 1fr); } .dlg .face { width: 44px; height: 44px; }
+    .dlg-text { font-size: 18px; }
+    .sb-gauges { margin-left: 0; }
+    .ov { position: static; padding: 8px; }
+  }
   /* Franja de ambiente: grada y jugadores, separada de los árbitros */
   .ambient { list-style: none; margin: 0; padding: 8px 12px; background: #0b1013; border: 1px solid var(--line); display: grid; gap: 2px;
     font-family: var(--f-mono); font-size: 17px; line-height: 1.15; min-height: calc(3 * 1.15em + 16px); }
@@ -1055,9 +1145,10 @@
   const $ = s => document.querySelector(s);
   const screen = $("#screen");
 
-  const MATCH_SCREENS = ["incident", "match", "half", "report"];
+  const MATCH_SCREENS = ["incident", "half", "report"];
   function renderHud() {
     save();
+    if (state.screen === "match") renderScore();
     const hud = $("#hud");
     hud.hidden = !MATCH_SCREENS.includes(state.screen);
     const tm = teamsOf(state);
@@ -1303,6 +1394,18 @@
     render();
   }
 
+  const RULES_LIST = `
+      <h3>Reglamento</h3>
+      <ul>
+        <li><b>Fuera de juego:</b> en el pase, alguna parte del cuerpo por delante del penúltimo defensor (el portero cuenta).</li>
+        <li><b>Entradas:</b> imprudente = amarilla. Tacos por delante al tobillo, la espinilla o el pecho = roja.</li>
+        <li><b>Simulación:</b> tirarse sin contacto = amarilla.</li>
+        <li><b>Gol:</b> el balón tiene que cruzar la línea entero.</li>
+        <li><b>Evitar un gol con la mano:</b> penalti y roja.</li>
+        <li><b>Agresión lejos del balón:</b> roja.</li>
+        <li class="circ">Circular: la mano solo es penalti si el brazo está separado del cuerpo.</li>
+        <li class="circ">Circular: máximo 3 revisiones VAR por partido.</li>
+      </ul>`;
   const RULES = `
     <details class="rules" id="rules">
       <summary>Reglamento del partido</summary>
@@ -1497,9 +1600,11 @@
     startIncident();
   }
 
-  // ---------- Partido rápido: flujo con silbato ----------
-  // Fases de cada jugada: intro → playing → deliberate → (whistled | goal | varcall | flow) → decided
-  // Al pitar se abre el acta: 1) lo que has visto, 2) consulta a otros árbitros, 3) decisión.
+  // ---------- Partido rápido: pantalla de juego ----------
+  // Todo pasa dentro de la imagen: marcador arriba, vista del partido, cajas de diálogo con los
+  // árbitros y bandeja de decisiones con iconos. Sin paneles laterales.
+  // Fases: intro → playing → deliberate → (whistled | goal | varcall | flow) → decided
+  // Pasos al pitar: seen (lo que viste) → consult (a quién preguntas) → decide (qué pitas); var = monitor
   const METERS = [
     ["comite", "Comité", "confianza en ti", "var(--good)"],
     ["local", "Grada local", "enfado", "var(--sur)"],
@@ -1512,12 +1617,69 @@
     temp: ["TÁNGANA", "Los jugadores se lían a golpes en una tángana general. Partido suspendido."],
     comite: ["RELEVADO", "El delegado del comité te releva al descanso. No vuelves a salir al campo."]
   };
-  // A quién puedes consultar antes de decidir
   const SOURCES = [["asistente", "Asistente"], ["cuarto", "Cuarto árbitro"], ["var", "Sala VAR"]];
+  const PEOPLE = {
+    tu: { name: "Tú", bg: "#1f4428", skin: "#d9a77e", hair: "#35241a", prop: "whistle" },
+    asistente: { name: "Asistente", bg: "#1f3470", skin: "#e2b48a", hair: "#5a3a24", prop: "flag" },
+    cuarto: { name: "Cuarto árbitro", bg: "#4a2f6e", skin: "#a8744e", hair: "#0b0e12", prop: "board" },
+    var: { name: "Sala VAR", bg: "#5a3a24", skin: "#f0cfa6", hair: "#8a98a4", prop: "headset" },
+    delegado: { name: "Delegado del comité", bg: "#2a323d", skin: "#d9a77e", hair: "#c8d0d6", prop: "tie" }
+  };
 
-  function newCur() { return { phase: "intro", varOpen: false, whistled: false, whistleT: null, opts: null, notes: [], asked: {} }; }
+  // Retrato pixelado de 16x16
+  function drawFace(cv, who) {
+    const P = PEOPLE[who], g = cv.getContext("2d"), px = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+    px(0, 0, 16, 16, P.bg);
+    px(2, 12, 12, 4, "#0b0e12");                      // camiseta negra de árbitro
+    px(6, 12, 4, 1, "#f4f4ee");                       // cuello
+    px(6, 10, 4, 2, P.skin);                          // cuello
+    px(4, 3, 8, 8, P.skin);                           // cara
+    px(4, 2, 8, 2, P.hair); px(3, 3, 1, 4, P.hair); px(12, 3, 1, 4, P.hair);
+    px(6, 6, 1, 1, "#0b0e12"); px(9, 6, 1, 1, "#0b0e12");
+    px(7, 9, 2, 1, "#8e1418");
+    if (P.prop === "flag") { px(13, 2, 1, 9, "#c8d0d6"); px(14, 2, 2, 2, "#f2c81c"); px(14, 4, 2, 2, "#d8232a"); }
+    if (P.prop === "board") { px(11, 8, 5, 4, "#1a1f27"); px(12, 9, 1, 2, "#ff5a4a"); px(14, 9, 1, 2, "#5ad07a"); }
+    if (P.prop === "headset") { px(3, 2, 10, 1, "#1a1f27"); px(2, 5, 2, 3, "#1a1f27"); px(12, 5, 2, 3, "#1a1f27"); px(10, 8, 3, 1, "#1a1f27"); }
+    if (P.prop === "whistle") { px(9, 9, 3, 1, "#c8d0d6"); px(4, 11, 1, 2, "#d8232a"); }
+    if (P.prop === "tie") { px(7, 12, 2, 4, "#8e1418"); px(2, 12, 4, 4, "#3d4854"); px(10, 12, 4, 4, "#3d4854"); }
+  }
+  function paintFaces(root) { root.querySelectorAll("canvas[data-face]").forEach(c => drawFace(c, c.dataset.face)); }
+  // Texto que aparece letra a letra, como en los juegos de la época
+  function typeText(root) {
+    root.querySelectorAll("[data-type]").forEach(el => {
+      const full = el.dataset.type;
+      if (RM) { el.textContent = full; return; }
+      let i = 0;
+      el.textContent = "";
+      const step = () => { i += 2; el.textContent = full.slice(0, i); if (i < full.length) view.typer = setTimeout(step, 18); };
+      clearTimeout(view.typer);
+      step();
+    });
+  }
+  const face = (who, cls = "face") => `<canvas class="${cls}" data-face="${who}" width="16" height="16" aria-hidden="true"></canvas>`;
+  const dialog = (who, text, actions = "") => `
+    <div class="dlg">
+      ${face(who)}
+      <div class="dlg-body"><b class="dlg-who">${esc(PEOPLE[who].name)}</b><p class="dlg-text" data-type="${esc(text)}"></p>${actions ? `<div class="dlg-actions">${actions}</div>` : ""}</div>
+    </div>`;
 
-  // Franja de ambiente: grada, jugadores y lo que haces tú. Separada de lo que dicen los árbitros.
+  // Iconos de cada decisión, para distinguirlas de un vistazo
+  function optIcons(o) {
+    const cards = [].concat(o.cardTo || []), L = o.label;
+    const ic = [];
+    if (/^Penalti/.test(L)) ic.push("pen");
+    if (/fuera de juego/i.test(L)) ic.push("flag");
+    else if (/^Anular/.test(L)) ic.push("no");
+    if (o.goal && /^Gol/.test(L)) ic.push("goal");
+    if (/^Falta/.test(L) && !cards.length) ic.push("foul");
+    cards.forEach(k => ic.push(k.kind === "R" ? "r" : "y"));
+    if (o.noFoul || /^Nada|^No es gol|^Reanudar/.test(L)) ic.push("go");
+    if (!ic.length) ic.push("foul");
+    return ic.map(k => `<i class="ic ic-${k}"></i>`).join("");
+  }
+
+  function newCur() { return { phase: "intro", step: null, varOpen: false, whistled: false, whistleT: null, opts: null, notes: [], asked: {}, said: null }; }
+
   function amb(txt, tone = "info") {
     state.amb = (state.amb || []).concat([[tone, txt]]).slice(-6);
     renderAmbient();
@@ -1525,8 +1687,9 @@
   function renderAmbient() {
     const el = $("#ambient");
     if (!el) return;
-    const list = (state.amb || []).slice(-3).reverse();
-    el.innerHTML = list.map(([tone, txt], i) => `<li class="${tone}${i ? "" : " now"}">${esc(txt)}</li>`).join("");
+    const last = (state.amb || []).slice(-1)[0];
+    el.className = "ticker " + (last ? last[0] : "");
+    el.textContent = last ? last[1] : "";
   }
 
   function startQuickMatch() {
@@ -1540,79 +1703,61 @@
     amb("Empieza el partido. El estadio está lleno.");
   }
 
+  // Marcador fino: resultado, minuto, grada, temperatura, tarjetas y VAR. La confianza del comité no se ve.
+  function renderScore() {
+    const el = $("#scorebar");
+    if (!el) return;
+    const tm = teamsOf(state), inc = INCIDENTS[state.idx], m = state.meters;
+    const chip = k => { const sh = tm.kits[k].shirt; return `<span class="t" style="background:${sh};color:${["W", "Y", "S"].includes(FAM[sh]) || sh === "#f07a5a" ? "#0b0e12" : "#f4f4ee"}">${esc(tm[k][1])}</span>`; };
+    const gauge = (label, v) => `<div class="gauge ${v >= 80 ? "hot2" : v >= 60 ? "hot1" : ""}" title="${label}: ${v}"><span>${label}</span><b class="trk"><i style="width:${clamp(v, 0, 100)}%"></i></b></div>`;
+    const cards = Object.entries(state.cards).filter(([, n]) => n > 0);
+    el.innerHTML = `
+      <div class="sb-score">${chip("N")}<b>${state.score.N}</b><em>–</em><b>${state.score.S}</b>${chip("S")}</div>
+      <div class="sb-min">${inc.minute}'</div>
+      <div class="sb-gauges">${gauge("Grada local", m.local)}${gauge("Visitantes", m.visit)}${gauge("Temperatura", m.temp)}</div>
+      <div class="sb-cards" title="Tarjetas">${cards.length ? cards.map(([id, n]) => `<span class="mini ${n >= 2 ? "r" : "y"}">${esc(tm[id[0]][1])} ${esc(id.slice(1) === "1" ? "POR" : id.slice(1))}</span>`).join("") : `<span class="none">Sin tarjetas</span>`}</div>
+      <div class="sb-var">VAR ${[0, 1, 2].map(i => `<i class="pip ${i < state.varLeft ? "on" : ""}"></i>`).join("")}</div>
+      <button class="sb-rules" id="rulesBtn" aria-expanded="false">Reglas</button>`;
+    $("#rulesBtn").onclick = () => { const r = $("#rulesBox"); r.hidden = !r.hidden; };
+  }
+
   function renderMatch() {
     const inc = INCIDENTS[state.idx], c = state.cur;
     c.notes = c.notes || []; c.asked = c.asked || {};
     if (c.phase === "playing") c.phase = "intro"; // una jugada a medias al volver: se ve desde el principio
+    if ((c.phase === "whistled" || c.phase === "goal") && !c.step) c.step = "seen";
     screen.innerHTML = `
-      <section class="stage">
-        <div class="left">
-          <div class="monitor ${c.varOpen ? "var" : ""}" id="monitor">
-            <canvas id="cv" width="${CW}" height="${CH}" aria-label="Vista de la jugada"></canvas>
-            <div class="tag" id="tag">${c.varOpen ? "VAR · REVISIÓN" : "● EN DIRECTO"}</div>
-            <div class="tc" id="tc"></div>
-            ${c.phase === "intro" ? `<button class="playover" id="playBtn">${state.idx === 0 ? "▶ Empezar el partido" : "▶ Minuto " + inc.minute + "'"}</button>` : ""}
-            <div class="ask" id="ask" hidden>¿PITAS?<b id="askN"></b></div>
-          </div>
-          <ul class="ambient" id="ambient" aria-live="polite"></ul>
-          <button class="whistle" id="whistle" ${["intro", "playing", "deliberate"].includes(c.phase) ? "" : "disabled"}>¡PITAR! <small id="wsub">barra espaciadora</small></button>
-          <div class="varbar" id="varbar" ${c.varOpen ? "" : "hidden"}>
-            <div class="row">
-              <button class="btn sm" id="fb" aria-label="Frame anterior">◀</button>
-              <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Línea de tiempo">
-              <button class="btn sm" id="ff" aria-label="Frame siguiente">▶</button>
-              <button class="btn sm" id="slow">Cámara lenta</button>
-            </div>
-            <div class="row"><span class="lbl">Ir a</span>${inc.events.map(([t, l]) => `<button class="btn sm" data-jump="${t}">${l}</button>`).join("")}</div>
-            <div class="row">
-              <button class="btn sm" id="zoom" aria-pressed="false">Zoom</button>
-              <button class="btn sm" id="line" aria-pressed="false">Línea de fuera de juego</button>
-              <span class="seg">
-                <button class="btn sm" data-cam="tribuna">Tribuna</button>
-                <button class="btn sm" data-cam="porteria">Portería</button>
-                <button class="btn sm" data-cam="contra">Contracampo</button>
-                <button class="btn sm" data-cam="linea">Línea de gol</button>
-                <button class="btn sm" data-cam="cenital">Cenital</button>
-              </span>
-            </div>
-          </div>
+      <section class="game">
+        <div class="scorebar" id="scorebar"></div>
+        <div class="view ${c.varOpen ? "var" : ""}" id="monitor">
+          <canvas id="cv" width="${CW}" height="${CH}" aria-label="Vista de la jugada"></canvas>
+          <div class="tag" id="tag">${c.varOpen ? "VAR · REVISIÓN" : "● EN DIRECTO"}</div>
+          <div class="ticker" id="ambient" aria-live="polite"></div>
+          <div class="tc" id="tc"></div>
+          ${c.phase === "intro" ? `<button class="playover" id="playBtn">${state.idx === 0 ? "▶ Empezar el partido" : "▶ Minuto " + inc.minute + "'"}</button>` : ""}
+          <div class="ask" id="ask" hidden>¿PITAS?<b id="askN"></b></div>
+          <div class="ov" id="ov"></div>
+          <button class="whistle-fab" id="whistle" ${["intro", "playing", "deliberate"].includes(c.phase) ? "" : "hidden"}>¡PITAR!<small id="wsub">espacio</small></button>
+          <div class="rulesbox" id="rulesBox" hidden>${RULES_LIST}</div>
         </div>
-        <aside class="side">
-          <div class="acta" id="acta"></div>
-          <div class="sidefoot">
-            <div class="cardsbox" id="cardsbox"></div>
-            ${RULES}
-          </div>
-        </aside>
       </section>`;
+    renderScore();
     renderAmbient();
     renderMatchPanel();
-    renderCards();
-    wireVar();
     $("#whistle").onclick = () => { if (state.cur.phase === "intro") playClip(); else whistle(); };
     const pb = $("#playBtn");
     if (pb) pb.onclick = playClip;
     view.t = c.whistled ? c.whistleT : c.phase === "intro" ? 0 : 1;
-    if (c.varOpen) view.t = 0;
+    if (c.varOpen) view.t = view.varT ?? 0;
     draw();
     if (c.phase === "deliberate") startDeliberation();
-    // a partir de la segunda jugada el partido sigue solo
     if (c.phase === "intro" && state.idx > 0 && !c.autoStarted) {
       c.autoStarted = true;
       clearTimeout(view.auto);
       view.auto = setTimeout(() => { if (state.screen === "match" && state.cur.phase === "intro") playClip(); }, RM ? 1400 : 1100);
     }
   }
-
-  function renderCards() {
-    const el = $("#cardsbox");
-    if (!el) return;
-    const tm = teamsOf(state);
-    const list = Object.entries(state.cards).filter(([, n]) => n > 0);
-    el.innerHTML = `<h3>Tarjetas</h3>` + (list.length
-      ? `<ul>${list.map(([id, n]) => `<li><span class="card ${n >= 2 ? "r" : "y"}"></span>${esc(tm[id[0]][1])} ${esc(id.slice(1) === "1" ? "portero" : id.slice(1))}${n >= 2 ? " · fuera" : ""}</li>`).join("")}</ul>`
-      : `<p class="hint">Ninguna todavía.</p>`);
-  }
+  function renderCards() { renderScore(); }
 
   function optsList() {
     const inc = INCIDENTS[state.idx], c = state.cur;
@@ -1630,66 +1775,105 @@
 
   function consult(src) {
     const c = state.cur, inc = INCIDENTS[state.idx];
-    if (c.asked[src]) return;
-    c.asked[src] = true;
-    const txt = src === "asistente" ? inc.hint[1] : src === "var" ? inc.varHint[1] : fourthSays(inc);
-    c.notes.push([src, txt]);
-    bump("local", 2); bump("visit", 2);
-    if (Object.keys(c.asked).length === 2) amb("La grada pita mientras hablas con tus compañeros.", "crowd");
-    renderHud();
+    if (!c.asked[src]) {
+      c.asked[src] = true;
+      const txt = src === "asistente" ? inc.hint[1] : src === "var" ? inc.varHint[1] : fourthSays(inc);
+      c.notes.push([src, txt]);
+      bump("local", 2); bump("visit", 2);
+      if (Object.keys(c.asked).length === 2) amb("La grada pita mientras hablas con tus compañeros.", "crowd");
+      renderScore();
+    }
+    c.said = src;
     renderMatchPanel();
   }
 
-  const OPT_CARD = o => { const k = [].concat(o.cardTo || [])[0]; return k ? (k.kind === "R" ? "r" : "y") : o.goal ? "g" : "w"; };
-
+  // Todo lo que se superpone a la imagen, según la fase y el paso
   function renderMatchPanel() {
     save();
-    const c = state.cur, el = $("#acta"), inc = INCIDENTS[state.idx];
-    if (!el) return;
-    const head = `<div class="acta-head"><span>Acta · Jugada ${state.idx + 1} de ${CLIPS_PER_MATCH}</span><b>${inc.minute}'</b></div>`;
-    const notes = c.notes.length ? `<ul class="notes">${c.notes.map(([src, txt]) => `<li class="n-${src}"><b>${esc(SOURCES.find(s => s[0] === src)[1])}</b>${esc(txt)}</li>`).join("")}</ul>` : "";
-    if (["intro", "playing", "flow"].includes(c.phase)) {
-      el.innerHTML = `${head}<p class="acta-lead">Observa la jugada.</p><p class="acta-hint">Si ves una infracción, pita. Si no, deja jugar.</p>`;
-    } else if (c.phase === "deliberate") {
-      el.innerHTML = `${head}<p class="acta-lead">¿Has visto algo?</p><p class="acta-hint">Tienes unos segundos para pitar.</p>
-        <button class="pbtn" id="letPlay">Dejar seguir →</button>`;
-      $("#letPlay").onclick = endDeliberation;
+    const c = state.cur, ov = $("#ov"), inc = INCIDENTS[state.idx];
+    if (!ov) return;
+    const wb = $("#whistle");
+    if (wb) wb.hidden = !["intro", "playing", "deliberate"].includes(c.phase);
+    let html = "";
+    if (c.phase === "deliberate") {
+      html = `<button class="pill" id="letPlay">Dejar seguir ▸</button>`;
     } else if (c.phase === "varcall") {
-      el.innerHTML = `${head}<p class="acta-lead">La sala VAR te llama.</p>${notes}
-        <div class="acta-actions">
-          ${state.varLeft > 0 ? `<button class="pbtn var" id="goVar">Ir al monitor (quedan ${state.varLeft})</button>` : `<p class="acta-hint">No te quedan revisiones.</p>`}
-          <button class="pbtn" id="keepPlay">Mantener: sigue el juego</button>
-        </div>`;
-      const gv = $("#goVar");
-      if (gv) gv.onclick = () => { c.opts = "w"; c.phase = "whistled"; openVarQ(); };
-      $("#keepPlay").onclick = () => applyOutcome({ label: "Sin pitar", ...inc.noWhistle }, "Mantienes tu decisión: sigue el juego.");
+      html = dialog("var", "¡Espera! Revisa la jugada, puede haber algo.",
+        `${state.varLeft > 0 ? `<button class="pill amber" id="goVar">Ir al monitor (${state.varLeft})</button>` : ""}<button class="pill" id="keepPlay">Mantener: sigue el juego</button>`);
     } else if (c.phase === "whistled" || c.phase === "goal") {
-      el.innerHTML = `${head}
-        <ol class="steps">
-          <li><h3>Lo que has visto</h3><p>${esc(inc.seen || inc.title)}</p></li>
-          <li><h3>Consulta</h3>
-            <div class="consult">
-              ${SOURCES.map(([k, l]) => `<button class="pbtn src s-${k}" data-src="${k}" ${c.asked[k] ? "disabled" : ""}>${l}</button>`).join("")}
-              ${!c.varOpen ? `<button class="pbtn var" id="varBtn" ${state.varLeft > 0 ? "" : "disabled"}>Revisar en el monitor (${state.varLeft})</button>` : ""}
+      if (c.step === "seen") {
+        const lead = c.phase === "goal" ? (inc.question === "¿Vale el gol?" || !inc.question ? "¡Gol! Pero antes, lo que he visto: " : "") : "";
+        html = dialog("tu", lead + (inc.seen || inc.title), `<button class="pill" id="toConsult">Consultar ▸</button><button class="pill ghost" id="toDecide">Decidir ya ▸</button>`);
+      } else if (c.step === "consult") {
+        const said = c.said && c.notes.find(n => n[0] === c.said);
+        html = `
+          <div class="panel">
+            <p class="panel-title">¿A quién consultas?</p>
+            <div class="who-row">
+              ${SOURCES.map(([k, l]) => `<button class="who ${c.asked[k] ? "done" : ""} ${c.said === k ? "sel" : ""}" data-src="${k}">${face(k, "wface")}<span>${l}</span></button>`).join("")}
+              <button class="who tv" id="varBtn" ${state.varLeft > 0 ? "" : "disabled"}><span class="tvicon"></span><span>Monitor VAR (${state.varLeft})</span></button>
             </div>
-            ${notes || `<p class="acta-hint">Preguntar hace esperar a la grada.</p>`}
-          </li>
-          <li><h3>${c.phase === "goal" ? (inc.question || "¿Vale el gol?") : "¿Qué pitas?"}</h3>
-            <div class="opts">${optsList().map((o, i) => `<button class="pbtn opt" data-opt="${i}"><span class="card ${OPT_CARD(o)}"></span>${esc(o.label)}</button>`).join("")}</div>
-          </li>
-        </ol>`;
-      el.querySelectorAll("[data-src]").forEach(b => b.onclick = () => consult(b.dataset.src));
-      el.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => applyOutcome(optsList()[+b.dataset.opt]));
-      const vb = $("#varBtn");
-      if (vb) vb.onclick = openVarQ;
+            <p class="panel-hint">Cada consulta hace esperar a la grada.</p>
+          </div>
+          ${said ? dialog(said[0], said[1], `<button class="pill" id="toDecide">Decidir ▸</button>`) : `<div class="dlg-row"><button class="pill" id="toDecide">Decidir ▸</button></div>`}`;
+      } else if (c.step === "decide") {
+        html = `
+          <div class="panel tray">
+            <p class="panel-title">${c.phase === "goal" ? (inc.question || "¿Vale el gol?") : "¿Qué pitas?"}</p>
+            <div class="tray-grid">${optsList().map((o, i) => `<button class="opt-tile" data-opt="${i}"><span class="icons">${optIcons(o)}</span><span>${esc(o.label)}</span></button>`).join("")}</div>
+            <button class="pill ghost small" id="backConsult">‹ Volver a consultar</button>
+          </div>`;
+      } else if (c.step === "var") {
+        html = `
+          <div class="varpanel" id="varbar">
+            <div class="row">
+              <button class="btn sm" id="fb" aria-label="Frame anterior">◀</button>
+              <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Línea de tiempo">
+              <button class="btn sm" id="ff" aria-label="Frame siguiente">▶</button>
+              <button class="btn sm" id="slow">Lenta</button>
+              <button class="btn sm" id="zoom" aria-pressed="false">Zoom</button>
+              <button class="btn sm" id="line" aria-pressed="false">Línea</button>
+            </div>
+            <div class="row">
+              ${inc.events.map(([t, l]) => `<button class="btn sm" data-jump="${t}">${l}</button>`).join("")}
+              <span class="seg">${[["tribuna", "Tribuna"], ["porteria", "Portería"], ["contra", "Contra"], ["linea", "Línea gol"], ["cenital", "Cenital"]].map(([k, l]) => `<button class="btn sm" data-cam="${k}">${l}</button>`).join("")}</span>
+              <button class="pill amber" id="endVar">Terminar revisión ▸</button>
+            </div>
+          </div>`;
+      }
     } else if (c.phase === "decided") {
       const last = state.idx >= CLIPS_PER_MATCH - 1 || state.over;
       const d = state.decisions[state.decisions.length - 1];
-      el.innerHTML = `${head}<p class="acta-hint">Tu decisión</p><p class="acta-lead">${esc(d ? d.label : "")}</p>
-        <button class="pbtn primary" id="next">${last ? "Ver el informe del comité →" : "Reanudar el partido →"}</button>`;
-      $("#next").onclick = nextClip;
+      const crowd = (state.amb || []).slice(-1)[0];
+      html = `
+        <div class="verdict">
+          <p class="v-label">${esc(d ? d.label : "")}</p>
+          ${crowd ? `<p class="v-crowd ${crowd[0]}">${esc(crowd[1])}</p>` : ""}
+          <button class="pill" id="next">${last ? "Ver el informe del comité ▸" : "Reanudar el partido ▸"}</button>
+        </div>`;
     }
+    ov.innerHTML = html;
+    ov.className = "ov" + (c.step === "var" && (c.phase === "whistled" || c.phase === "goal") ? " bottom" : "");
+    paintFaces(ov);
+    typeText(ov);
+    const on = (id, fn) => { const b = $("#" + id); if (b) b.onclick = fn; };
+    on("letPlay", endDeliberation);
+    on("goVar", () => { c.opts = inc.wOpts ? "w" : "end"; c.phase = "whistled"; openVarQ(); });
+    on("keepPlay", () => applyOutcome({ label: "Sin pitar", ...inc.noWhistle }, "Mantienes tu decisión: sigue el juego."));
+    on("toConsult", () => { c.step = "consult"; renderMatchPanel(); });
+    on("toDecide", () => { c.step = "decide"; renderMatchPanel(); });
+    on("backConsult", () => { c.step = c.varOpen ? "var" : "consult"; renderMatchPanel(); if (c.varOpen) wireVar(); });
+    on("varBtn", openVarQ);
+    on("endVar", () => { view.varT = view.t; stopSlow(); c.step = "decide"; renderMatchPanel(); });
+    on("next", nextClip);
+    ov.querySelectorAll("[data-src]").forEach(b => b.onclick = () => consult(b.dataset.src));
+    ov.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => applyOutcome(optsList()[+b.dataset.opt]));
+    if (c.step === "var") { wireVar(); draw(); }
   }
+
+  // Momento clave de la jugada: ahí va la cámara lenta y hacia ahí mira tu vista
+  const KEY_LABELS = new Set(["Entrada", "Impacto", "Remate", "Contacto", "Choque", "Bote", "Control", "En la línea", "Pase", "Jugada previa"]);
+  const keyTime = inc => inc.keyT ?? (inc.events.find(e => KEY_LABELS.has(e[1])) || [0.5])[0];
 
   function playClip() {
     const c = state.cur;
@@ -1698,10 +1882,14 @@
     c.phase = "playing";
     $("#playBtn")?.remove();
     renderMatchPanel();
-    const t0 = performance.now();
+    const inc = INCIDENTS[state.idx], kT = keyTime(inc);
+    let last = performance.now();
+    view.t = 0;
     const step = now => {
       if (state.cur.phase !== "playing") return;
-      view.t = clamp((now - t0) / LIVE_MS, 0, 1);
+      const slow = Math.abs(view.t - kT) < 0.07 ? 0.35 : 1; // cámara lenta en el momento clave
+      view.t = clamp(view.t + (now - last) / LIVE_MS * slow, 0, 1);
+      last = now;
       draw();
       if (view.t < 1) view.anim = requestAnimationFrame(step);
       else clipEnded();
@@ -1714,17 +1902,15 @@
     if (c.phase !== "playing" && c.phase !== "deliberate") return;
     cancelAnimationFrame(view.anim);
     stopDeliberation();
-    c.phase = "whistled"; c.whistled = true; c.whistleT = view.t; c.opts = inc.wOpts ? "w" : "end";
-    $("#whistle").disabled = true;
+    c.phase = "whistled"; c.step = "seen"; c.whistled = true; c.whistleT = view.t; c.opts = inc.wOpts ? "w" : "end";
     amb("¡Piiiii! Paras el juego.", "you");
     renderMatchPanel();
   }
 
   function clipEnded() {
     const c = state.cur, inc = INCIDENTS[state.idx];
-    $("#whistle").disabled = true;
     if (inc.goalClip) {
-      c.phase = "goal"; c.opts = "end";
+      c.phase = "goal"; c.step = "seen"; c.opts = "end";
       (inc.post || []).forEach(m => amb(m[1], "crowd"));
       renderMatchPanel();
       return;
@@ -1732,7 +1918,6 @@
     startDeliberation();
   }
 
-  // Tras la jugada, unos segundos para decidir si pitas
   const DELIB_MS = 4000;
   function startDeliberation() {
     const c = state.cur;
@@ -1740,11 +1925,11 @@
     stopDeliberation();
     const end = performance.now() + DELIB_MS;
     const w = $("#whistle"), ask = $("#ask");
-    w.disabled = false; w.classList.add("hot");
+    w.hidden = false; w.classList.add("hot");
     ask.hidden = false;
     const tick = () => {
       const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
-      $("#askN").textContent = left; $("#wsub").textContent = `quedan ${left} s`;
+      $("#askN").textContent = left; $("#wsub").textContent = `${left} s`;
       if (left <= 0) endDeliberation();
     };
     tick();
@@ -1754,18 +1939,15 @@
   function stopDeliberation() {
     clearInterval(view.delib);
     const w = $("#whistle"), ask = $("#ask");
-    if (w) { w.classList.remove("hot"); $("#wsub").textContent = "barra espaciadora"; }
+    if (w) { w.classList.remove("hot"); $("#wsub").textContent = "espacio"; }
     if (ask) ask.hidden = true;
   }
   function endDeliberation() {
     const c = state.cur, inc = INCIDENTS[state.idx];
     if (c.phase !== "deliberate") return;
     stopDeliberation();
-    $("#whistle").disabled = true;
-    // Si se te escapa algo, a veces la sala VAR te avisa (y a veces se equivoca)
     if (Math.random() < (inc.infraction ? (inc.severe ? 0.55 : 0.35) : 0.07)) {
       c.phase = "varcall";
-      c.notes.push(["var", "¡Espera! Revisa la jugada, puede haber algo."]);
       renderMatchPanel();
       return;
     }
@@ -1776,10 +1958,13 @@
   function openVarQ() {
     const c = state.cur;
     if (state.varLeft <= 0) return;
-    state.varLeft--;
-    bump("local", 4); bump("visit", 4);
-    c.varOpen = true;
-    amb("Te vas al monitor. La grada se impacienta.", "crowd");
+    if (!c.varOpen) {
+      state.varLeft--;
+      bump("local", 4); bump("visit", 4);
+      amb("Te vas al monitor. La grada se impacienta.", "crowd");
+    }
+    c.varOpen = true; c.step = "var";
+    view.varT = 0;
     renderHud();
     renderMatch();
   }
@@ -1792,22 +1977,17 @@
     stopSlow();
     const grade = o.noFoul && !c.whistled && inc.noWhistle ? inc.noWhistle.grade : o.grade;
     state.decisions.push({ minute: inc.minute, title: inc.title, label: o.label, grade, truth: inc.truth, why: inc.why, ref: inc.ref || null, whistled: c.whistled });
-    // comité
     bump("comite", grade === "correct" ? 7 : grade === "partial" ? 1 : -12);
-    // aficiones: quien sale favorecido se calma, el otro se enfada
     if (o.fav) {
       const fav = o.fav === "atk" ? inc.atk : inc.def;
       bump(fav === "N" ? "visit" : "local", o.mag);
       bump(fav === "N" ? "local" : "visit", -o.mag / 2);
     }
-    // temperatura de los jugadores
     bump("temp", 2);
     if (grade === "wrong" && inc.infraction) bump("temp", inc.severe ? 20 : 12);
     if (grade === "correct") bump("temp", o.cardTo ? -12 : inc.infraction ? -5 : 0);
     if (c.whistled && !inc.infraction) bump("temp", 3);
-    // relato en la franja de ambiente
     if (silent) amb("Sigue, sigue.", "you");
-    else amb(note || o.label + ".", "you");
     for (const ct of [].concat(o.cardTo || [])) {
       const id = ct.t + ct.n, had = state.cards[id] || 0, who = ct.n === 1 ? "portero" : ct.n;
       if (ct.kind === "R") { state.cards[id] = 2; amb(`Roja al ${who} del ${tm[ct.t][2]}. A la calle.`, "you"); }
@@ -1825,12 +2005,10 @@
     }
     if (state.meters.temp >= 70) amb("Los jugadores están muy calientes. Hay empujones en cada jugada.", "warn");
     if (state.meters.local >= 75) amb("La grada local está al borde. Vuelan objetos.", "warn");
-    // ¿se suspende?
     for (const k of ["local", "visit", "temp"]) if (state.meters[k] >= 100) state.over = k;
     if (state.meters.comite <= 0) state.over = "comite";
-    renderHud();
-    renderCards();
-    c.phase = "decided";
+    renderScore();
+    c.phase = "decided"; c.step = null;
     if (silent && !state.over) {
       clearTimeout(view.auto);
       view.auto = setTimeout(() => { if (state.screen === "match" && state.cur.phase === "decided") nextClip(); }, RM ? 900 : 700);
@@ -1838,6 +2016,7 @@
       return;
     }
     if (state.over) amb(GAME_OVER[state.over][1], "warn");
+    else if (state.meters.comite <= 25) amb("El delegado del comité toma notas en la grada. No parece contento.", "warn");
     renderMatchPanel();
   }
   const pickMsg = a => a[(Math.random() * a.length) | 0];
@@ -1850,7 +2029,7 @@
     INCIDENTS = state.clips;
     state.cur = newCur();
     state.extra = 0;
-    Object.assign(view, { t: 0, cam: "tribuna", zoom: false, line: false });
+    Object.assign(view, { t: 0, cam: "tribuna", zoom: false, line: false, varT: 0 });
     render();
   }
 
@@ -2337,8 +2516,23 @@
   function cameraFor(kind, inc, t, zoom) {
     const fe = focusPos(inc, t), b = ballPos(inc, t);
     let pos, tgt, f;
-    if (kind === "ojos") {
-      // El árbitro sigue la jugada desde atrás y en diagonal, con algo de retraso
+    if (kind === "ojos" && inc.events) {
+      // El árbitro se coloca en diagonal al momento clave, en el lado donde nadie le tapa,
+      // y mira al balón salvo cerca de ese momento, cuando mira a la acción
+      const kT = keyTime(inc), k = focusPos(inc, kT), sy = k.y < 100 ? 1 : -1;
+      if (!inc._refPos) {
+        const cands = [[-26, 24 * sy], [-30, -22 * sy], [-10, 32 * sy]].map(([dx, dy]) => [clamp(k.x + dx, 14, 292), clamp(k.y + dy, 10, 190)]);
+        const blockers = ([px, py]) => inc.ents.filter(e => {
+          const q = at(e.k, kT), vx = k.x - px, vy = k.y - py, L = Math.hypot(vx, vy);
+          const s = clamp(((q.x - px) * vx + (q.y - py) * vy) / (L * L), 0, 1);
+          return Math.hypot(q.x - (px + vx * s), q.y - (py + vy * s)) < 2.5 && Math.hypot(q.x - k.x, q.y - k.y) > 4;
+        }).length;
+        inc._refPos = cands.reduce((a, c2) => blockers(c2) < blockers(a) ? c2 : a);
+      }
+      const m = clamp(1 - Math.abs(t - kT) * 2.5, 0, 1);
+      pos = [inc._refPos[0], inc._refPos[1], 10];
+      tgt = [b.x + (k.x - b.x) * m, b.y + (k.y - b.y) * m, 3]; f = 300;
+    } else if (kind === "ojos") {
       const lb = ballPos(inc, Math.max(0, t - 0.15));
       pos = [clamp(lb.x - 40, 14, 262), clamp(lb.y + 24, 12, 188), 10];
       tgt = [b.x, b.y, 3]; f = 330;
