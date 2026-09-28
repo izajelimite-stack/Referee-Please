@@ -33,8 +33,7 @@ mirar mejor, pero cuesta tiempo, paciencia de la grada y no siempre está de tu 
 | **Dinero** | Tu sueldo de árbitro, en forintos | Base + bonus por acierto − multas (+ sobornos) |
 
 ## 5. El VAR
-- **En directo ves con tus ojos**: cámara a pie de campo, detrás de la jugada y en diagonal,
-  como corre un árbitro. Hay jugadores que tapan y ángulos malos.
+- **En directo se ve por la tele**: cámara de retransmisión en la tribuna.
 - **Cámaras del VAR**: tribuna, detrás de la portería, contracampo y cenital (pizarra).
   Cada jugada tiene un ángulo "bueno" (la entrada se ve de lado desde la portería; la mano,
   de frente) y otros que engañan. Encontrarlo es parte del juego.
@@ -137,8 +136,10 @@ dentro de la imagen, como en *Papers, Please*:
 - Veredicto en el centro de la imagen con la reacción de la grada.
 - Ambiente (grada, temperatura, tus decisiones) en una línea sobre la imagen.
 
-**Jugadas más legibles**: cámara lenta automática en el momento clave de cada jugada; tu vista
-se coloca en diagonal a ese momento y elige el lado donde ningún jugador te tapa.
+**Jugadas más legibles**: el directo se ve como en la tele, con una cámara de retransmisión en la
+tribuna que sigue el balón con un paneo suave y se acerca en el momento clave, a cámara lenta.
+El VAR es la ventaja: otros ángulos, zoom fuerte, frame a frame y línea de fuera de juego.
+(La vista en primera persona del árbitro se descartó: se entendía peor que el VAR.)
 
 **Tiempo para decidir**: las jugadas duran 5 s. Al terminar, la imagen se congela con un
 "¿PITAS?" y 4 s de cuenta atrás; el botón de pitar late. "Dejar seguir" salta la espera.

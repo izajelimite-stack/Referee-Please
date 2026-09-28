@@ -1185,7 +1185,7 @@
   // ---------- Menú principal ----------
   const HOW = `
     <ul class="how">
-      <li>El partido fluye: cada jugada la ves <b>una sola vez</b>, con tus propios ojos. Pulsa <b>¡PITAR!</b> (o la barra espaciadora) durante la jugada o en los <b>4 segundos</b> que tienes al terminar. Si no pitas, el juego sigue.</li>
+      <li>El partido fluye: cada jugada la ves <b>una sola vez</b>, en directo por la tele. Pulsa <b>¡PITAR!</b> (o la barra espaciadora) durante la jugada o en los <b>4 segundos</b> que tienes al terminar. Si no pitas, el juego sigue.</li>
       <li>Si dudas, pide el <b>VAR</b>: repetición frame a frame, cinco cámaras (incluida la de la línea de gol), zoom y línea de fuera de juego. Tienes <b>3 revisiones</b>, y cada una calienta a la grada.</li>
       <li>La sala VAR, tu asistente y la grada opinan. <b>No siempre tienen razón.</b></li>
       <li>Lee el <b>reglamento</b>: las circulares cambian las reglas.</li>
@@ -2192,7 +2192,7 @@
 
   // ---------- Dibujo ----------
   // Mundo: x a lo largo del campo (portería en x=304), y a lo ancho, z altura. 1 unidad ≈ 18 cm.
-  const CAMS = { ojos: "TU VISTA", tribuna: "CAM 1 · TRIBUNA", porteria: "CAM 2 · PORTERÍA", contra: "CAM 3 · CONTRACAMPO", linea: "CAM 5 · LÍNEA DE GOL", cenital: "CAM 4 · CENITAL" };
+  const CAMS = { ojos: "TV · EN DIRECTO", tribuna: "CAM 1 · TRIBUNA", porteria: "CAM 2 · PORTERÍA", contra: "CAM 3 · CONTRACAMPO", linea: "CAM 5 · LÍNEA DE GOL", cenital: "CAM 4 · CENITAL" };
 
   const focusPos = (inc, t) => inc.focus === "ball" ? ballPos(inc, t) : at(inc.ents.find(e => e.id === inc.focus).k, t);
   const ballPos = (inc, t) => { const b = at(inc.ball, t); return { x: b.x, y: b.y, z: inc.ballZ ? at(inc.ballZ, t).x : 0 }; };
@@ -2209,7 +2209,7 @@
     if (cam === "cenital") drawTop(ctx, inc, view.t, zoom, line);
     else draw3D(ctx, inc, view.t, cam, zoom, line, varOn);
     const tc = $("#tc");
-    if (tc) tc.textContent = varOn ? `${CAMS[cam]}${zoom ? " · ZOOM" : ""} · ${(view.t * LIVE_MS / 1000).toFixed(2)}s` : `TU VISTA · ${inc.minute}'`;
+    if (tc) tc.textContent = varOn ? `${CAMS[cam]}${zoom ? " · ZOOM" : ""} · ${(view.t * LIVE_MS / 1000).toFixed(2)}s` : `TV · ${inc.minute}'`;
     const scrub = $("#scrub");
     if (scrub) scrub.value = Math.round(view.t * 1000);
     const zb = $("#zoom"), lb = $("#line");
@@ -2516,26 +2516,13 @@
   function cameraFor(kind, inc, t, zoom) {
     const fe = focusPos(inc, t), b = ballPos(inc, t);
     let pos, tgt, f;
-    if (kind === "ojos" && inc.events) {
-      // El árbitro se coloca en diagonal al momento clave, en el lado donde nadie le tapa,
-      // y mira al balón salvo cerca de ese momento, cuando mira a la acción
-      const kT = keyTime(inc), k = focusPos(inc, kT), sy = k.y < 100 ? 1 : -1;
-      if (!inc._refPos) {
-        const cands = [[-26, 24 * sy], [-30, -22 * sy], [-10, 32 * sy]].map(([dx, dy]) => [clamp(k.x + dx, 14, 292), clamp(k.y + dy, 10, 190)]);
-        const blockers = ([px, py]) => inc.ents.filter(e => {
-          const q = at(e.k, kT), vx = k.x - px, vy = k.y - py, L = Math.hypot(vx, vy);
-          const s = clamp(((q.x - px) * vx + (q.y - py) * vy) / (L * L), 0, 1);
-          return Math.hypot(q.x - (px + vx * s), q.y - (py + vy * s)) < 2.5 && Math.hypot(q.x - k.x, q.y - k.y) > 4;
-        }).length;
-        inc._refPos = cands.reduce((a, c2) => blockers(c2) < blockers(a) ? c2 : a);
-      }
-      const m = clamp(1 - Math.abs(t - kT) * 2.5, 0, 1);
-      pos = [inc._refPos[0], inc._refPos[1], 10];
-      tgt = [b.x + (k.x - b.x) * m, b.y + (k.y - b.y) * m, 3]; f = 300;
-    } else if (kind === "ojos") {
-      const lb = ballPos(inc, Math.max(0, t - 0.15));
-      pos = [clamp(lb.x - 40, 14, 262), clamp(lb.y + 24, 12, 188), 10];
-      tgt = [b.x, b.y, 3]; f = 330;
+    if (kind === "ojos") {
+      // Directo: cámara de retransmisión en la tribuna que sigue el balón con un paneo suave
+      // y se acerca un poco en el momento clave de la jugada
+      const kT = inc.events ? keyTime(inc) : 0.5, k = focusPos(inc, kT), m = clamp(1 - Math.abs(t - kT) * 3, 0, 1);
+      const lb = ballPos(inc, Math.max(0, t - 0.08));
+      const cx = lb.x * 0.6 + b.x * 0.4 + (k.x - b.x) * m * 0.6, cy = lb.y * 0.6 + b.y * 0.4 + (k.y - b.y) * m * 0.6;
+      pos = [cx, 290, 78]; tgt = [cx, cy, 2]; f = 470 * (1 + 0.45 * m);
     } else if (kind === "tribuna") { pos = [fe.x, 300, 85]; tgt = [fe.x, fe.y, 2]; f = 720; }
     else if (kind === "porteria") { pos = [352, 100 + (fe.y - 100) * 0.4, 28]; tgt = [fe.x, fe.y, 4]; f = 520; }
     else if (kind === "linea") { pos = [304, -40, 7]; tgt = [304, clamp(fe.y, 60, 140), 4]; f = 700; if (zoom) { f *= 3.5; tgt = [304, fe.y, inc.focusZ ?? 4]; } return makeCam(pos, tgt, f * LW / 480); }
